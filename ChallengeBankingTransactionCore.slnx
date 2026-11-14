@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChallengeBankingTransactionCore.Service.Api.Transaction/ChallengeBankingTransactionCore.Service.Api.Transaction.csproj" />
+    <Project Path="src/ChallengeBankingTransactionCore.Service.Application.Transaction/ChallengeBankingTransactionCore.Service.Application.Transaction.csproj" />
+    <Project Path="src/ChallengeBankingTransactionCore.Service.Domain.Transaction/ChallengeBankingTransactionCore.Service.Domain.Transaction.csproj" />
+    <Project Path="src/ChallengeBankingTransactionCore.Service.Infrastructure.Transaction/ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChallengeBankingTransactionCore.Service.Api.Transaction.Tests/ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,18 @@
+services:
+  api:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.60"
+          memory: 512M
+        reservations:
+          memory: 256M
+          cpus: "0.20"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
+
+networks:
+  rede_ChallengeBankingTransactionCore:
+    external: true
+    name: ChallengeBankingTransactionCore_network_prod
