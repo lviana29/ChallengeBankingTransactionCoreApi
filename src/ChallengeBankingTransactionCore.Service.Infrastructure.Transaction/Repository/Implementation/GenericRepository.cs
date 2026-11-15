@@ -2,20 +2,27 @@ using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.B
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repositories;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.Context;
 using Microsoft.EntityFrameworkCore;
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
 
 namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repositories.Implementation {
     public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity {
         protected readonly AppDbContext _context;
+        private readonly IResiliencePolicyExecutorPort _resiliencePolicyExecutorPort;
         private DbSet<T> _dataSet;
-        public GenericRepository(AppDbContext context) {
+        public GenericRepository(AppDbContext context, IResiliencePolicyExecutorPort resiliencePolicyExecutorPort) {
             _context = context;
+            _resiliencePolicyExecutorPort = resiliencePolicyExecutorPort;
             _dataSet = context.Set<T>();
         }
 
         public T Create(T entity, bool saveChanges = true) {
             _dataSet.Add(entity);
             if (saveChanges) {
-                _context.SaveChanges();
+                _resiliencePolicyExecutorPort.ExecuteAsyncWithoutResult(() => {
+                    _context.SaveChanges();
+                    return Task.CompletedTask;
+                }).GetAwaiter().GetResult();
+
             }
 
             return entity;
@@ -26,7 +33,10 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             if (existingEntity != null) {
                 _dataSet.Remove(existingEntity);
                 if (saveChanges) {
-                    _context.SaveChanges();
+                    _resiliencePolicyExecutorPort.ExecuteAsyncWithoutResult(() => {
+                        _context.SaveChanges();
+                        return Task.CompletedTask;
+                    }).GetAwaiter().GetResult();
                 }
             }
         }
@@ -48,7 +58,10 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             if (existingEntity == null) return null;
             _context.Entry(existingEntity).CurrentValues.SetValues(entity);
             if (saveChanges) {
-                _context.SaveChanges();
+                _resiliencePolicyExecutorPort.ExecuteAsyncWithoutResult(() => {
+                    _context.SaveChanges();
+                    return Task.CompletedTask;
+                }).GetAwaiter().GetResult();
             }
             return existingEntity;
         }

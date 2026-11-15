@@ -4,21 +4,26 @@ using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.C
 namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository {
     public class UnitOfWork : IUnitOfWork {
         private readonly AppDbContext _context;
+        private readonly IResiliencePolicyExecutorPort _resiliencePolicyExecutorPort;
 
-        public UnitOfWork(AppDbContext context) {
+        public UnitOfWork(AppDbContext context, IResiliencePolicyExecutorPort resiliencePolicyExecutorPort) {
             _context = context;
+            _resiliencePolicyExecutorPort = resiliencePolicyExecutorPort;
         }
         public async Task<bool> CommitAsync() {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try {
-                var affectedRows = await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return affectedRows > 0;
-            }
-            catch {
-                await transaction.RollbackAsync();
-                throw;
-            }
+            return await _resiliencePolicyExecutorPort.ExecuteAsync<bool>(async () => {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try {
+                    var affectedRows = await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return affectedRows >= 0;
+                }
+                catch {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
+
         }
     }
 }

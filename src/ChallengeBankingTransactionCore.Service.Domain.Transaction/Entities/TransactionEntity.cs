@@ -7,7 +7,7 @@ namespace ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities {
         public decimal Amount { get; set; } = 0;
         public decimal BalanceAfter { get; set; } = 0;
         public DateTime CreatedAt { get; set; } = new();
-        public int TransactionTypeId { get; set; } = 0;
+        public Guid TransactionTypeId { get; set; } = new Guid();
         public TransactionTypeEntity Type { get; set; } = new();
     }
 }
