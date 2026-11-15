@@ -8,15 +8,15 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Mod
         [Required]
         public string Description { get; set; } = String.Empty;
         [Required]
-        public string AccountId { get; set; } = String.Empty;
+        public Guid AccountId { get; set; } = new Guid();
         [Required]
-        public string IdempotencyKey { get; set; } = String.Empty;
+        public Guid? IdempotencyKey { get; set; }
         [Required]
         public decimal Amount { get; set; } = 0;
         [Required]
         public decimal BalanceAfter { get; set; } = 0;
         [Required]
-        public int TransactionTypeId { get; set; } = 0;
+        public Guid TransactionTypeId { get; set; } = new Guid();
         [Required]
         public DateTime CreatedAt { get; set; } = new();
         [Required]

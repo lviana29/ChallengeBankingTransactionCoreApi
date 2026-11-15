@@ -26,7 +26,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
                 if (descriptor != null) {
                     services.Remove(descriptor);
                     services.AddDbContext<AppDbContext>(options =>
-                        options.UseMySql(_connectionString, ServerVersion.AutoDetect(_connectionString)));
+                        options.UseMySQL(_connectionString));
                 }
             });
         }

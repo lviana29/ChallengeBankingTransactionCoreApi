@@ -1,6 +1,4 @@
 @ChallengeBankingTransactionCore.Service.Api.Transaction_HostAddress = http://localhost:5214
-
-GET {{ChallengeBankingTransactionCore.Service.Api.Transaction_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###

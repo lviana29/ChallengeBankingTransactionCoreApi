@@ -7,6 +7,7 @@ using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.ProcessTransactionUseCase;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository.Implementation;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository;
+using ChallengeBankingTransactionCore.Service.Api.Transaction.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,11 +41,18 @@ builder.Services.AddScoped<IProcessTransactionUseCase, ProcessTransactionUseCase
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
+//middlewares
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
+if (app.Environment.IsProduction()) {
+    app.UseHttpsRedirection();
+}
+
 app.UseRouting();
 
 app.UseCorsConfiguration(builder.Configuration);
+
+app.UseAuthorization();
 
 app.MapControllers();
 

@@ -4,8 +4,8 @@ using Microsoft.OpenApi;
 
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Configurations {
     public static class OpenAPIConfig {
-        private static readonly string _AppName = "API_NAME";
-        private static readonly string _AppDescription = $"{_AppName} - Test Project for Asp.Net 10 Web API";
+        private static readonly string _AppName = "Challenge Banking Transaction Core API";
+        private static readonly string _AppDescription = $"{_AppName} - Microsserviço de Core Banking para gestão de contas e transações financeiras com foco em concorrência, consistência e idempotência.";
         private static readonly string _AppVersion = "v1";
 
         public static IServiceCollection AddOpenAPIConfiguration(this IServiceCollection services) {
@@ -14,9 +14,8 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Configurations
                 Version = _AppVersion,
                 Description = _AppDescription,
                 Contact = new OpenApiContact {
-                    Name = "Leo",
-                    Email = "leo@example.com",
-                    Url = new Uri("http://www.example.com")
+                    Name = "Leonardo Viana",
+                    Email = "leonardovianaamorim@gmail.com"
                 },
                 License = new OpenApiLicense {
                     Name = "MIT License",

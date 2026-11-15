@@ -1,4 +1,3 @@
-using System.Data.Common;
 using Testcontainers.MySql;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Configurations;
 
@@ -8,7 +7,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
         public string ConnectionString => Container.GetConnectionString();
 
         public MySQLFixture() {
-            Container = new MySqlBuilder()
+            Container = new MySqlBuilder("mysql:8.0")
                 .WithDatabase("ChallengeBankingTransactionCore_Transaction_IntegrationTestDb")
                 .WithUsername("root")
                 .WithPassword("@admin123")

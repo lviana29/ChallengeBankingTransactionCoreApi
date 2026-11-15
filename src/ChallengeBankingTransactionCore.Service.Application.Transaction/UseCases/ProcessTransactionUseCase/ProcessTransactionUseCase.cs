@@ -14,38 +14,50 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             _unitOfWork = unitOfWork;
         }
         public async Task<string> ExecuteAsync(TransactionDto transactionDto) {
-            decimal newBalance = 0;
-            var transactionId = "";
-            var existingTransaction = await _transactionRepository.GetByIdempotency(transactionDto.idempotencyKey);
+            Guid idempotencyKey = Guid.TryParse(transactionDto.idempotencyKey, out var parsedIdempotencyKey)
+                ? parsedIdempotencyKey
+                : Guid.NewGuid();
 
-            if (existingTransaction != null) return existingTransaction.Id;
+            var existingTransaction = await _transactionRepository.GetByIdempotency(idempotencyKey);
 
-            if ((TransactionTypeEntityEnum)transactionDto.transactionType != TransactionTypeEntityEnum.Credit ||
-            (TransactionTypeEntityEnum)transactionDto.transactionType != TransactionTypeEntityEnum.Debit) throw new InvalidTransactionTypeError();
+            if (existingTransaction != null) return existingTransaction.Id.ToString();
+
+            Guid transactionTypeId = transactionDto.transactionType switch {
+                1 => TransactionTypeConstants.CreditId,
+                2 => TransactionTypeConstants.DebitId,
+                _ => throw new InvalidTransactionTypeError()
+            };
 
             var account = await _accountRepository.GetByAccountNumber(transactionDto.accountNumber);
             if (account == null) throw new AccountNotFoundError();
 
             if (!account.IsActive) throw new AccountBlockedError();
 
+            Guid transactionId;
+            string? description;
+            decimal newBalance;
             if ((TransactionTypeEntityEnum)transactionDto.transactionType == TransactionTypeEntityEnum.Debit) {
                 if (account.Balance < transactionDto.value) throw new InvalidValueToDebitError();
                 newBalance = account.Balance - transactionDto.value;
                 //update account
                 await _accountRepository.UpdateAccount(account);
                 //insert in transaction table
+                description = "Débito em conta";
+                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, newBalance, transactionDto.value);
             }
             else {
                 newBalance = transactionDto.value + account.Balance;
                 //update account
                 await _accountRepository.UpdateAccount(account);
                 //insert in transaction table
+                description = "Crédito em conta";
+                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, newBalance, transactionDto.value);
             }
 
             var success = await _unitOfWork.CommitAsync();
             if (!success) throw new ProcessTransactionError();
 
-            return transactionId;
+            return transactionId.ToString();
         }
     }
 }

@@ -28,7 +28,7 @@ public static class EvolveConfig {
         return services;
     }
 
-    private static void ExecuteEvolveMigration(string connectionString) {
+    public static void ExecuteEvolveMigration(string connectionString) {
         var baseDirectory = AppContext.BaseDirectory;
         var migrationsPath = Path.Combine(baseDirectory, "Database/Migrations");
         var datasetPath = Path.Combine(baseDirectory, "Database/Dataset");

@@ -8,16 +8,34 @@ public class AppDbContext : DbContext {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Account> Accounts { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Transaction>(a => {
-            a.HasOne(ty => ty.Type)
-            .WithOne()
-            .HasForeignKey<TransactionType>(t => t.Id);
-            a.HasIndex(t => t.TransactionTypeId).IsUnique();
-            a.HasIndex(a => a.AccountId).IsUnique();
+        modelBuilder.Entity<Account>(entity => {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.HasIndex(e => e.AccountNumber).IsUnique();
+        });
+
+        modelBuilder.Entity<TransactionType>(entity => {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+        });
+
+        modelBuilder.Entity<Transaction>(entity => {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("CHAR(36)");
+            entity.Property(e => e.AccountId).HasColumnType("CHAR(36)");
+            entity.Property(e => e.TransactionTypeId).HasColumnType("CHAR(36)");
+
+            entity.HasOne(tp => tp.Type)
+            .WithMany()
+            .HasForeignKey(t => t.TransactionTypeId);
+
+            entity.Property(e => e.IdempotencyKey).HasColumnType("CHAR(36)");
+            entity.HasIndex(t => t.IdempotencyKey).IsUnique();
         });
     }
 

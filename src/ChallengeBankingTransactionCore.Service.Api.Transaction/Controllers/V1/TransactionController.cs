@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.Dto;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.ProcessTransactionUseCase;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +7,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Controllers.V1
     [Route("api/[controller]/v1")]
     public class TransactionController : ControllerBase {
         private readonly IProcessTransactionUseCase _processTransactionUseCase;
-        TransactionController(IProcessTransactionUseCase processTransactionUseCase) {
+        public TransactionController(IProcessTransactionUseCase processTransactionUseCase) {
             _processTransactionUseCase = processTransactionUseCase;
         }
 

@@ -18,7 +18,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             return entity;
         }
 
-        public void Delete(string id) {
+        public void Delete(Guid id) {
             var existingEntity = _dataSet.FirstOrDefault(e => e.Id == id);
             if (existingEntity != null) {
                 _dataSet.Remove(existingEntity);
@@ -26,7 +26,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             }
         }
 
-        public bool Exists(string id) {
+        public bool Exists(Guid id) {
             return _dataSet.Any(e => e.Id == id);
         }
 
@@ -34,7 +34,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             return _dataSet.ToList();
         }
 
-        public T? FindById(string id) {
+        public T? FindById(Guid id) {
             return _dataSet.FirstOrDefault(e => e.Id == id);
         }
 

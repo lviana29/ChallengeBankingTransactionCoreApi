@@ -1,4 +1,4 @@
-using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Auth.Adapter;
+using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Adapter;
 
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Infrastructure.Adapters {
     public class SerilogAdapterTests {
