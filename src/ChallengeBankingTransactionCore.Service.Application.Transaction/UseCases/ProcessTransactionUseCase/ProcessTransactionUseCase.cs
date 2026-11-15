@@ -36,22 +36,25 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             Guid transactionId;
             string? description;
             decimal newBalance;
+
             if ((TransactionTypeEntityEnum)transactionDto.transactionType == TransactionTypeEntityEnum.Debit) {
                 if (account.Balance < transactionDto.value) throw new InvalidValueToDebitError();
                 newBalance = account.Balance - transactionDto.value;
+                account.Balance = newBalance;
                 //update account
                 await _accountRepository.UpdateAccount(account);
                 //insert in transaction table
                 description = "Débito em conta";
-                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, newBalance, transactionDto.value);
+                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance);
             }
             else {
                 newBalance = transactionDto.value + account.Balance;
+                account.Balance = newBalance;
                 //update account
                 await _accountRepository.UpdateAccount(account);
                 //insert in transaction table
                 description = "Crédito em conta";
-                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, newBalance, transactionDto.value);
+                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance);
             }
 
             var success = await _unitOfWork.CommitAsync();

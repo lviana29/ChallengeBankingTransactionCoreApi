@@ -21,7 +21,9 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
         }
 
         public async Task UpdateAccount(AccountEntity accountEntity) {
-            _repository.Update(accountEntity.Adapt<Account>());
+            var entity = accountEntity.Adapt<Account>();
+            entity.RowVersion = DateTime.UtcNow;
+            _repository.Update(entity, false);
         }
     }
 }

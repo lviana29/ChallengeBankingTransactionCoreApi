@@ -12,17 +12,22 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             _dataSet = context.Set<T>();
         }
 
-        public T Create(T entity) {
+        public T Create(T entity, bool saveChanges = true) {
             _dataSet.Add(entity);
-            _context.SaveChanges();
+            if (saveChanges) {
+                _context.SaveChanges();
+            }
+
             return entity;
         }
 
-        public void Delete(Guid id) {
+        public void Delete(Guid id, bool saveChanges = true) {
             var existingEntity = _dataSet.FirstOrDefault(e => e.Id == id);
             if (existingEntity != null) {
                 _dataSet.Remove(existingEntity);
-                _context.SaveChanges();
+                if (saveChanges) {
+                    _context.SaveChanges();
+                }
             }
         }
 
@@ -38,11 +43,13 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             return _dataSet.FirstOrDefault(e => e.Id == id);
         }
 
-        public T? Update(T entity) {
+        public T? Update(T entity, bool saveChanges = true) {
             var existingEntity = _dataSet.FirstOrDefault(e => e.Id == entity.Id);
             if (existingEntity == null) return null;
             _context.Entry(existingEntity).CurrentValues.SetValues(entity);
-            _context.SaveChanges();
+            if (saveChanges) {
+                _context.SaveChanges();
+            }
             return existingEntity;
         }
     }

@@ -13,10 +13,13 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Mod
         public bool IsActive { get; set; }
         [Required]
         [ConcurrencyCheck]
-        public DateTime RowVersion { get; set; } = new();
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public DateTime RowVersion { get; set; }
         [Required]
-        public DateTime CreatedAt { get; set; } = new();
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public DateTime CreatedAt { get; set; }
         [Required]
-        public DateTime UpdatedAt { get; set; } = new();
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public DateTime UpdatedAt { get; set; }
     }
 }

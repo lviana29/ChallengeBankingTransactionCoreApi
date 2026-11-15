@@ -1,8 +1,8 @@
 CREATE TABLE `Transaction`(
-    `Id` INT NOT NULL,
+    `Id` CHAR(36) NOT NULL,
     `Description` VARCHAR(150) NOT NULL,
     `AccountId` CHAR(36) NOT NULL,
-    `IdempotencyKey` VARCHAR(100) NOT NULL,
+    `IdempotencyKey` CHAR(36) NOT NULL,
     `Amount` DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
     `BalanceAfter` DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
     `TransactionTypeId` CHAR(36) NOT NULL,

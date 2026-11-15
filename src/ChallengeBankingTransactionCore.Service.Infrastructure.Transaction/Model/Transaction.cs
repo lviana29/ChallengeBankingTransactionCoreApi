@@ -10,7 +10,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Mod
         [Required]
         public Guid AccountId { get; set; } = new Guid();
         [Required]
-        public Guid? IdempotencyKey { get; set; }
+        public Guid IdempotencyKey { get; set; } = new Guid();
         [Required]
         public decimal Amount { get; set; } = 0;
         [Required]
@@ -18,9 +18,11 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Mod
         [Required]
         public Guid TransactionTypeId { get; set; } = new Guid();
         [Required]
-        public DateTime CreatedAt { get; set; } = new();
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public DateTime CreatedAt { get; set; }
         [Required]
-        public DateTime UpdatedAt { get; set; } = new();
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public DateTime UpdatedAt { get; set; }
         public TransactionType Type { get; set; } = new();
 
     }

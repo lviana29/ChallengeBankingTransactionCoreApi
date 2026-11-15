@@ -20,14 +20,15 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             return entity == null ? null : entity.Adapt<TransactionEntity>();
         }
 
-        public Guid ProcessTransactionAsync(Guid accountNumberId, string description, decimal amount, decimal balanceAfter) {
+        public Guid ProcessTransactionAsync(Guid accountNumberId, string description, decimal amount, Guid idempotencyKey, decimal balanceAfter) {
             var entity = new Model.Transaction {
                 AccountId = accountNumberId,
                 Description = description,
                 Amount = amount,
-                BalanceAfter = balanceAfter
+                BalanceAfter = balanceAfter,
+                IdempotencyKey = idempotencyKey
             };
-            _repository.Create(entity);
+            _repository.Create(entity, false);
             return entity.Id;
         }
     }

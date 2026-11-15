@@ -17,6 +17,18 @@ public class AppDbContext : DbContext {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnType("CHAR(36)");
             entity.HasIndex(e => e.AccountNumber).IsUnique();
+
+            entity.Property(e => e.RowVersion)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.CreatedAt)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.UpdatedAt)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
         modelBuilder.Entity<TransactionType>(entity => {
@@ -36,7 +48,14 @@ public class AppDbContext : DbContext {
 
             entity.Property(e => e.IdempotencyKey).HasColumnType("CHAR(36)");
             entity.HasIndex(t => t.IdempotencyKey).IsUnique();
+
+            entity.Property(e => e.CreatedAt)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.UpdatedAt)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
-
 }
