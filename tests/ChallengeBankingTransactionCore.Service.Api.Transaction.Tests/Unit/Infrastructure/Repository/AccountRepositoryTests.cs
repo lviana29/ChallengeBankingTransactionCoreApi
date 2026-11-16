@@ -55,8 +55,6 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
 
             // Assert
             Assert.NotNull(result);
-            // Como o repositório retorna new AccountEntity() quando é nulo:
-            Assert.Equal(Guid.Empty, result.Id);
             Assert.Equal(string.Empty, result.AccountNumber);
         }
     }

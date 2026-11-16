@@ -23,11 +23,21 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <None Update="appsettings.Test.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChallengeBankingTransactionCore.Service.Api.Transaction\ChallengeBankingTransactionCore.Service.Api.Transaction.csproj" />
     <ProjectReference Include="..\..\src\ChallengeBankingTransactionCore.Service.Infrastructure.Transaction\ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.csproj" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Outras propriedades existentes -->
+    <CoverletOutputFormat>json,opencover</CoverletOutputFormat>
+    <Exclude>[*.Tests]*,[xunit.*]*</Exclude>
+    <ExcludeByFile>**/bin/**/*.cs,**/obj/**/*.cs</ExcludeByFile>
+  </PropertyGroup>
 
 </Project>

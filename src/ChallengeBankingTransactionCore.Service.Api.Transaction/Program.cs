@@ -35,6 +35,7 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IResiliencePolicyExecutorPort, PollyResiliencePolicyExecutorAdapter>();
 
 // Use cases (Application)
 builder.Services.AddScoped<IProcessTransactionUseCase, ProcessTransactionUseCase>();

@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Adapter;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Infrastructure.Adapters {
     public class ResiliencePolicyExecutorAdapterTests {

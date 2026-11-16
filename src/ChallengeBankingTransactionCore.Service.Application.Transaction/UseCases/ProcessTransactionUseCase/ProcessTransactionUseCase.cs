@@ -14,6 +14,9 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             _unitOfWork = unitOfWork;
         }
         public async Task<string> ExecuteAsync(TransactionDto transactionDto) {
+
+            if (transactionDto.value < 0) throw new InvalidTransactionValueError();
+
             Guid idempotencyKey = Guid.TryParse(transactionDto.idempotencyKey, out var parsedIdempotencyKey)
                 ? parsedIdempotencyKey
                 : Guid.NewGuid();
