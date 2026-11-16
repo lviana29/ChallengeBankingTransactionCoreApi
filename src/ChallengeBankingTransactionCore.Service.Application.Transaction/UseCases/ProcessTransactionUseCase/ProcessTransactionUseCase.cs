@@ -32,7 +32,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             };
 
             var account = await _accountRepository.GetByAccountNumber(transactionDto.accountNumber);
-            if (account == null) throw new AccountNotFoundError();
+            if (String.IsNullOrEmpty(account.AccountNumber)) throw new AccountNotFoundError();
 
             if (!account.IsActive) throw new AccountBlockedError();
 
@@ -48,7 +48,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 await _accountRepository.UpdateAccount(account);
                 //insert in transaction table
                 description = "Débito em conta";
-                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance);
+                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
             }
             else {
                 newBalance = transactionDto.value + account.Balance;
@@ -57,7 +57,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 await _accountRepository.UpdateAccount(account);
                 //insert in transaction table
                 description = "Crédito em conta";
-                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance);
+                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
             }
 
             var success = await _unitOfWork.CommitAsync();

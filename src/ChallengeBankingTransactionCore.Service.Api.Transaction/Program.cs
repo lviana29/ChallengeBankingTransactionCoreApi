@@ -8,6 +8,7 @@ using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.P
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository.Implementation;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository;
 using ChallengeBankingTransactionCore.Service.Api.Transaction.Middlewares;
+using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.GetConsolidatedStatementUseCase;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,7 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IResiliencePolicyExecutorPort, PollyResiliencePolicyExecutorAdapter>();
+builder.Services.AddScoped<IGetConsolidatedStatementUseCase, GetConsolidatedStatementUseCase>();
 
 // Use cases (Application)
 builder.Services.AddScoped<IProcessTransactionUseCase, ProcessTransactionUseCase>();

@@ -1,5 +1,6 @@
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
+using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.Context;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repositories;
 using Mapster;
@@ -20,14 +21,34 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             return entity == null ? null : entity.Adapt<TransactionEntity>();
         }
 
-        public Guid ProcessTransactionAsync(Guid accountNumberId, string description, decimal amount, Guid idempotencyKey, decimal balanceAfter) {
+        public async Task<List<TransactionEntity>> GetRangeByAccountNumber(Guid accountNumberId, DateTime? startDate, DateTime? endDate) {
+            var query = _context.Transactions
+                .Include(x => x.Type)
+                .Where(x => x.AccountId == accountNumberId);
+
+            if (startDate.HasValue) {
+                query = query.Where(x => x.CreatedAt >= startDate.Value);
+            }
+
+            if (endDate.HasValue) {
+                var adjustedEndDate = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(x => x.CreatedAt <= adjustedEndDate);
+            }
+            var entities = await query.ToListAsync();
+
+            return entities == null ? new List<TransactionEntity>() : entities.Adapt<List<TransactionEntity>>();
+        }
+
+        public Guid ProcessTransactionAsync(Guid accountNumberId, string description, decimal amount, Guid idempotencyKey, decimal balanceAfter, Guid transactionTypeId) {
             var entity = new Model.Transaction {
                 AccountId = accountNumberId,
                 Description = description,
                 Amount = amount,
                 BalanceAfter = balanceAfter,
-                IdempotencyKey = idempotencyKey
+                IdempotencyKey = idempotencyKey,
+                TransactionTypeId = transactionTypeId
             };
+            _context.Entry(new TransactionType { Id = transactionTypeId }).State = EntityState.Unchanged;
             _repository.Create(entity, false);
             return entity.Id;
         }
