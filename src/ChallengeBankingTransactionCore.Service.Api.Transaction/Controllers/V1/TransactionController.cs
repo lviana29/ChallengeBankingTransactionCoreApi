@@ -15,6 +15,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Controllers.V1
         [ProducesResponseType(typeof(string), 201)]
         [ProducesResponseType(403)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(409)]
         [ProducesResponseType(422)]
         public async Task<IActionResult> Post([FromBody] TransactionDto dto) {
             var result = await _processTransactionUseCase.ExecuteAsync(dto);

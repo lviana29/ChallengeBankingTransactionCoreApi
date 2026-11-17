@@ -31,39 +31,52 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 _ => throw new InvalidTransactionTypeError()
             };
 
-            var account = await _accountRepository.GetByAccountNumber(transactionDto.accountNumber);
-            if (account == null) throw new AccountNotFoundError();
+            const int maxRetries = 3;
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    var account = await _accountRepository.GetByAccountNumber(transactionDto.accountNumber);
+                    if (account == null) throw new AccountNotFoundError();
 
-            if (!account.IsActive) throw new AccountBlockedError();
+                    if (!account.IsActive) throw new AccountBlockedError();
 
-            Guid transactionId;
-            string? description;
-            decimal newBalance;
+                    Guid transactionId;
+                    string? description;
+                    decimal newBalance;
 
-            if ((TransactionTypeEntityEnum)transactionDto.transactionType == TransactionTypeEntityEnum.Debit) {
-                if (account.Balance < transactionDto.value) throw new InvalidValueToDebitError();
-                newBalance = account.Balance - transactionDto.value;
-                account.Balance = newBalance;
-                //update account
-                await _accountRepository.UpdateAccount(account);
-                //insert in transaction table
-                description = "Débito em conta";
-                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
+                    if ((TransactionTypeEntityEnum)transactionDto.transactionType == TransactionTypeEntityEnum.Debit) {
+                        if (account.Balance < transactionDto.value) throw new InvalidValueToDebitError();
+                        newBalance = account.Balance - transactionDto.value;
+                        account.Balance = newBalance;
+                        //update account
+                        await _accountRepository.UpdateAccount(account);
+                        //insert in transaction table
+                        description = "Débito em conta";
+                        transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
+                    }
+                    else {
+                        newBalance = transactionDto.value + account.Balance;
+                        account.Balance = newBalance;
+                        //update account
+                        await _accountRepository.UpdateAccount(account);
+                        //insert in transaction table
+                        description = "Crédito em conta";
+                        transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
+                    }
+
+                    var success = await _unitOfWork.CommitAsync();
+                    if (!success) throw new ProcessTransactionError();
+
+                    return transactionId.ToString();
+                }
+                catch (AccountConcurrencyConflictException) {
+                    if (attempt == maxRetries) {
+                        throw;
+                    }
+                    await Task.Delay(50 * attempt);
+                }
             }
-            else {
-                newBalance = transactionDto.value + account.Balance;
-                account.Balance = newBalance;
-                //update account
-                await _accountRepository.UpdateAccount(account);
-                //insert in transaction table
-                description = "Crédito em conta";
-                transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
-            }
 
-            var success = await _unitOfWork.CommitAsync();
-            if (!success) throw new ProcessTransactionError();
-
-            return transactionId.ToString();
+            throw new AccountConcurrencyConflictException();
         }
     }
 }

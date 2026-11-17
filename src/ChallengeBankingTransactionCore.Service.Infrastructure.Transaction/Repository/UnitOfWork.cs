@@ -1,5 +1,7 @@
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler.Exceptions;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository {
     public class UnitOfWork : IUnitOfWork {
@@ -18,8 +20,14 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
                     await transaction.CommitAsync();
                     return affectedRows >= 0;
                 }
+                catch (DbUpdateConcurrencyException ex) {
+                    await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+                    throw new AccountConcurrencyConflictException(ex.Message);
+                }
                 catch {
                     await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
                     throw;
                 }
             });
