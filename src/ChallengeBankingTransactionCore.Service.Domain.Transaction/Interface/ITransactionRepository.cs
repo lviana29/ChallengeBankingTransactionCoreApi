@@ -5,5 +5,6 @@ namespace ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface {
         Guid ProcessTransactionAsync(Guid accountNumberId, string description, decimal amount, Guid idempotencyKey, decimal balanceAfter, Guid transactionTypeId);
         Task<TransactionEntity?> GetByIdempotency(Guid idempotencyKey);
         Task<List<TransactionEntity>> GetRangeByAccountNumber(Guid accountNumberId, DateTime? startDate, DateTime? endDate);
+        Task<decimal?> GetBalanceAtDateAsync(Guid accountNumberId, DateTime cutOffDate);
     }
 }

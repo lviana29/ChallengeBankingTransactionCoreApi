@@ -44,6 +44,8 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
             var statement = await response.Content.ReadFromJsonAsync<ConsolidatedStatementDto>();
             Assert.NotNull(statement);
             Assert.Equal(accountNumber, statement.accountNumber);
+            Assert.True(statement.consolidatedBalance >= 0);
+            Assert.NotEqual(default(DateTime), statement.referenceDate);
         }
 
         [Fact(DisplayName = "02 - Get Consolidated Statement With Non-Existent Account (404 Not Found)")]
@@ -75,6 +77,22 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
                 response.StatusCode == HttpStatusCode.BadRequest,
                 $"Expected 422 or 400, but got {response.StatusCode}"
             );
+        }
+
+        [Fact(DisplayName = "04 - Get Consolidated Statement With Invalid Date Range (422 Unprocessable Entity)")]
+        [TestPriority(4)]
+        public async Task GetConsolidatedStatement_ShouldReturn422_WhenStartDateIsGreaterThanEndDate() {
+            // Arrange
+            AddOriginHeader("http://localhost:3000");
+            string accountNumber = "12345-6";
+            string startDate = "2026-11-20";
+            string endDate = "2026-11-10";
+
+            // Act
+            var response = await _httpClient.GetAsync($"api/consolidatedstatement/v1?AccountNumber={accountNumber}&StartDate={startDate}&EndDate={endDate}");
+
+            // Assert
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
         }
     }
 }

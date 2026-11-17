@@ -12,19 +12,52 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         }
 
         public async Task<ConsolidatedStatementDto> ExecuteAsync(ConsolidatedTransactionsFiltersDto filtersDto) {
-            if (String.IsNullOrEmpty(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
+            if (string.IsNullOrEmpty(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
 
             var account = await _accountRepository.GetByAccountNumber(filtersDto.AccountNumber);
             if (account == null) throw new AccountNotFoundError();
             var startDate = filtersDto.StartDate;
             var endDate = filtersDto.EndDate;
 
-            if (startDate == null || endDate == null) {
-                endDate = DateTime.UtcNow;
-                startDate = DateTime.UtcNow.AddDays(-10);
+            DateTime effectiveStartDate;
+            DateTime effectiveEndDate;
+
+            // 1. Resolução inteligente da janela de segurança de no máximo 10 dias
+            if (startDate.HasValue && endDate.HasValue) {
+                effectiveStartDate = startDate.Value;
+                effectiveEndDate = endDate.Value;
+            }
+            else if (startDate.HasValue && !endDate.HasValue) {
+                effectiveStartDate = startDate.Value;
+                var projectedEnd = effectiveStartDate.AddDays(10);
+                effectiveEndDate = projectedEnd > DateTime.UtcNow ? DateTime.UtcNow : projectedEnd;
+            }
+            else if (!startDate.HasValue && endDate.HasValue) {
+                effectiveEndDate = endDate.Value;
+                effectiveStartDate = effectiveEndDate.AddDays(-10);
+            }
+            else {
+                effectiveEndDate = DateTime.UtcNow;
+                effectiveStartDate = effectiveEndDate.AddDays(-10);
             }
 
-            var transactions = await _transactionRepository.GetRangeByAccountNumber(account.Id, startDate, endDate);
+            // 2. Validação de consistência temporal
+            if (effectiveStartDate > effectiveEndDate) {
+                throw new InvalidDateRangeException();
+            }
+
+            // 3. Busca transações dentro do intervalo protegido
+            var transactions = await _transactionRepository.GetRangeByAccountNumber(account.Id, effectiveStartDate, effectiveEndDate);
+
+            // 4. Saldo consolidado no momento da data de corte (effectiveEndDate)
+            decimal consolidatedBalance;
+            if (effectiveEndDate.Date < DateTime.UtcNow.Date) {
+                var historicalBalance = await _transactionRepository.GetBalanceAtDateAsync(account.Id, effectiveEndDate);
+                consolidatedBalance = historicalBalance ?? 0.00m;
+            }
+            else {
+                consolidatedBalance = account.Balance;
+            }
 
             var consolidateTransactions = new List<ConsolidatedTransactionsDto>();
 
@@ -33,7 +66,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 consolidateTransactions.Add(consolidateT);
             });
 
-            return new ConsolidatedStatementDto(filtersDto.AccountNumber, account.Balance, consolidateTransactions);
+            return new ConsolidatedStatementDto(filtersDto.AccountNumber, consolidatedBalance, account.Balance, effectiveEndDate, consolidateTransactions);
         }
     }
 }

@@ -39,6 +39,20 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             return entities == null ? new List<TransactionEntity>() : entities.Adapt<List<TransactionEntity>>();
         }
 
+        public async Task<decimal?> GetBalanceAtDateAsync(Guid accountNumberId, DateTime cutOffDate) {
+            var adjustedDate = cutOffDate.TimeOfDay == TimeSpan.Zero
+                ? cutOffDate.Date.AddDays(1).AddTicks(-1)
+                : cutOffDate;
+
+            var transaction = await _context.Transactions
+                .Where(x => x.AccountId == accountNumberId && x.CreatedAt <= adjustedDate)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync();
+
+            return transaction?.BalanceAfter;
+        }
+
         public Guid ProcessTransactionAsync(Guid accountNumberId, string description, decimal amount, Guid idempotencyKey, decimal balanceAfter, Guid transactionTypeId) {
             var entity = new Model.Transaction {
                 AccountId = accountNumberId,
