@@ -273,6 +273,56 @@ Para responder à exigência de consultar a posição de saldo consolidado em um
 
 ---
 
+### 4.1 Configuração Inicial: Arquivo de Configuração Local (`appsettings`)
+
+> [!NOTE]
+> Por boas práticas de segurança e governança de segredos, arquivos locais contendo strings de conexão (`appsettings.json` e `appsettings.Development.json`) são protegidos pelo `.gitignore`.
+> - **Ao executar via Docker Compose / devops.sh:** As variáveis de ambiente de banco e logging são injetadas automaticamente pelos arquivos de compose.
+> - **Ao executar localmente via CLI / IDE (`dotnet run`):** É necessário criar o `appsettings.Development.json` a partir do template pré-configurado:
+
+```bash
+# Copiar o template de exemplo para o arquivo de configuração local
+cp src/ChallengeBankingTransactionCore.Service.Api.Transaction/appsettings.Example.json \
+   src/ChallengeBankingTransactionCore.Service.Api.Transaction/appsettings.Development.json
+```
+
+O arquivo `appsettings.Example.json` já inclui a string de conexão apontando para o MySQL exposto na porta `3307`:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Port=3307;Database=ChallengeBankingTransactionCore_Transaction_IntegrationTestDb;Uid=root;Pwd=@admin123;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Cors": {
+    "Origins": [
+      "http://localhost:3000",
+      "http://localhost:8080",
+      "https://sample.com.br",
+      "http://localhost:3050"
+    ]
+  },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning",
+        "ChallengeBankingTransactionCore.Service.Api.Transaction": "Debug"
+      }
+    },
+    "WriteTo": [{ "Name": "Console" }]
+  },
+  "AllowedHosts": "*"
+}
+```
+
+---
+
 ### Opção 1: Execução Automática via Script DevOps (Recomendado)
 
 O repositório inclui o script utilitário `devops.sh` que gerencia a rede Docker, o contêiner do MySQL 8 e a compilação/subida da API:
@@ -322,7 +372,12 @@ Se desejar depurar ou executar a API diretamente em sua IDE (.NET 10):
 # 1. Subir apenas o contêiner do banco de dados MySQL
 docker compose -f docker-compose.yml -f docker-compose-dev.yml up -d mysql
 
-# 2. A partir da pasta Api, restaurar e rodar o projeto da API
+# 2. Garantir que o appsettings.Development.json exista (conforme item 4.1)
+test -f src/ChallengeBankingTransactionCore.Service.Api.Transaction/appsettings.Development.json || \
+  cp src/ChallengeBankingTransactionCore.Service.Api.Transaction/appsettings.Example.json \
+     src/ChallengeBankingTransactionCore.Service.Api.Transaction/appsettings.Development.json
+
+# 3. Restaurar dependências e executar a API nativamente
 dotnet restore ChallengeBankingTransactionCore.slnx
 dotnet run --project src/ChallengeBankingTransactionCore.Service.Api.Transaction/ChallengeBankingTransactionCore.Service.Api.Transaction.csproj
 ```
@@ -464,6 +519,7 @@ Api/
 ├── devops.sh                              # Script utilitário de automação local
 ├── src/
 │   ├── ChallengeBankingTransactionCore.Service.Api.Transaction/          # Camada de Apresentação / REST API
+│   │   └── appsettings.Example.json                                      # Modelo de configuração para execução local
 │   ├── ChallengeBankingTransactionCore.Service.Application.Transaction/  # Casos de Uso e DTOs
 │   ├── ChallengeBankingTransactionCore.Service.Domain.Transaction/       # Entidades, Portas e Exceções
 │   └── ChallengeBankingTransactionCore.Service.Infrastructure.Transaction/# EF Core, EvolveDb, Polly, Repositories
