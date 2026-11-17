@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ChallengeBankingTransactionCore_MySQL_Dev
+    environment:
+      MYSQL_DATABASE: ChallengeBankingTransactionCore_Transaction_IntegrationTestDb
+      MYSQL_ROOT_PASSWORD: "@admin123"
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    networks:
+      - rede_ChallengeBanking
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p@admin123",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    container_name: ChallengeBankingTransactionCore.Api.Transaction.Dev
+    ports:
+      - "3050:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=ChallengeBankingTransactionCore_Transaction_IntegrationTestDb;Uid=root;Pwd=@admin123;
+    depends_on:
+      mysql:
+        condition: service_healthy # <-- A API só sobe após o MySQL responder ao healthcheck com sucesso!
+    networks:
+      - rede_ChallengeBanking
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+
+networks:
+  rede_ChallengeBanking:
+    external: true
+    name: ChallengeBanking_network_dev
+
+volumes:
+  mysql_dev_data:

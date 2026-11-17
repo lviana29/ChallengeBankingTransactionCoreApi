@@ -1,24 +1,16 @@
-name: ChallengeBankingTransactionCore-Transaction-dev
+name: ChallengeBankingTransaction-Transaction
 
 services:
   api:
-    container_name: ChallengeBankingTransactionCore-Transaction-dev
     build:
-      context: ./src/ChallengeBankingTransactionCore.Service.Api.Transaction
+      context: .
       dockerfile: Dockerfile
-    image: ChallengeBankingTransactionCore-Transaction:latest
+    image: ${IMAGE_URL:-ghcr.io/challengebanking/transaction:latest}
     restart: always
-    ports:
-      - "5000:8080"
-    env_file:
-      - path: .env.dev
-        required: false
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
     networks:
-      - rede_ChallengeBankingTransactionCore
+      - rede_ChallengeBanking
 
 networks:
-  rede_ChallengeBankingTransactionCore:
+  rede_ChallengeBanking:
     external: true
-    name: ChallengeBankingTransactionCore_network
+    name: ${NETWORK_NAME}
