@@ -58,7 +58,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Dom
             // Assert
             Assert.Equal("CORE_BANKING_004", ex.ErrorCode);
             Assert.Equal(422, ex.StatusCode);
-            Assert.Equal("error", ex.TypeReturn); // Note que este é "error" em vez de "warning"
+            Assert.Equal("error", ex.TypeReturn);
             Assert.Equal("Transaction failed", ex.Message);
         }
 
@@ -70,8 +70,32 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Dom
             // Assert
             Assert.Equal("CORE_BANKING_006", ex.ErrorCode);
             Assert.Equal(422, ex.StatusCode);
-            Assert.Equal("warning", ex.TypeReturn); // Note que este é "error" em vez de "warning"
+            Assert.Equal("warning", ex.TypeReturn);
             Assert.Equal("Invalid value for transaction", ex.Message);
+        }
+
+        [Fact]
+        public void InvalidAccountNumber_ShouldHaveCorrectProperties() {
+            // Act
+            var ex = new InvalidAccountNumber();
+
+            // Assert
+            Assert.Equal("CORE_BANKING_007", ex.ErrorCode);
+            Assert.Equal(403, ex.StatusCode);
+            Assert.Equal("warning", ex.TypeReturn);
+            Assert.Equal("Invalid account number", ex.Message);
+        }
+
+        [Fact]
+        public void ConsolidateStatementError_ShouldHaveCorrectProperties() {
+            // Act
+            var ex = new ConsolidateStatementError();
+
+            // Assert
+            Assert.Equal("CORE_BANKING_008", ex.ErrorCode);
+            Assert.Equal(403, ex.StatusCode);
+            Assert.Equal("warning", ex.TypeReturn);
+            Assert.Equal("Consolidate statement error", ex.Message);
         }
     }
 }

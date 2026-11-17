@@ -82,7 +82,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
             var repository = new TransactionRepository(context, genericRepoMock.Object);
 
             // Act
-            var transactionId = repository.ProcessTransactionAsync(accountId, "Pix In", 300m, idempotencyKey, 1300m);
+            var transactionId = repository.ProcessTransactionAsync(accountId, "Pix In", 300m, idempotencyKey, 1300m, TransactionTypeConstants.CreditId);
 
             // Assert
             Assert.NotEqual(Guid.Empty, transactionId);

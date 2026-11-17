@@ -14,10 +14,10 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
             _context = context;
             _repository = repository;
         }
-        public async Task<AccountEntity> GetByAccountNumber(string accountNumber) {
+        public async Task<AccountEntity?> GetByAccountNumber(string accountNumber) {
             var entity = await _context.Accounts
             .FirstOrDefaultAsync(x => x.AccountNumber == accountNumber);
-            return entity == null ? new AccountEntity() : entity.Adapt<AccountEntity>();
+            return entity == null ? null : entity.Adapt<AccountEntity>();
         }
 
         public async Task UpdateAccount(AccountEntity accountEntity) {

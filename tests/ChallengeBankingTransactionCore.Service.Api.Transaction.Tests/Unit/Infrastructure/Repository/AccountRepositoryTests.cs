@@ -54,8 +54,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
             var result = await repository.GetByAccountNumber("00000-0");
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(string.Empty, result.AccountNumber);
+            Assert.Null(result);
         }
     }
 }

@@ -54,7 +54,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
         public async Task ProcessTransaction_ShouldReturn403_WhenAccountIsBlocked() {
             // Arrange
             AddOriginHeader("http://localhost:3000");
-            var transactionDto = new TransactionDto("BLOCKED-ACC", 50.00m, 1, Guid.NewGuid().ToString());
+            var transactionDto = new TransactionDto("99887-1", 50.00m, 1, Guid.NewGuid().ToString());
 
             // Act
             var response = await _httpClient.PostAsJsonAsync("api/transaction/v1", transactionDto);
@@ -74,7 +74,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
             var response = await _httpClient.PostAsJsonAsync("api/transaction/v1", transactionDto);
 
             // Assert
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         [Fact(DisplayName = "04 - Process Transaction With Invalid Payload or Business Rule (422 Unprocessable Entity)")]

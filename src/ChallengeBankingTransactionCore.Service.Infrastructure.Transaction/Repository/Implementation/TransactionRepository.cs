@@ -48,7 +48,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Rep
                 IdempotencyKey = idempotencyKey,
                 TransactionTypeId = transactionTypeId
             };
-            _context.Entry(new TransactionType { Id = transactionTypeId }).State = EntityState.Unchanged;
+            _context.Entry(new Model.TransactionType { Id = transactionTypeId }).State = EntityState.Unchanged;
             _repository.Create(entity, false);
             return entity.Id;
         }

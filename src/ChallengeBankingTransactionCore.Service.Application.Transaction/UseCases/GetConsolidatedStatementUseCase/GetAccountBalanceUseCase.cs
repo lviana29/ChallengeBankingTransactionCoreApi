@@ -15,7 +15,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             if (String.IsNullOrEmpty(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
 
             var account = await _accountRepository.GetByAccountNumber(filtersDto.AccountNumber);
-            if (String.IsNullOrEmpty(account.AccountNumber)) throw new AccountNotFoundError();
+            if (account == null) throw new AccountNotFoundError();
             var startDate = filtersDto.StartDate;
             var endDate = filtersDto.EndDate;
 

@@ -32,7 +32,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             };
 
             var account = await _accountRepository.GetByAccountNumber(transactionDto.accountNumber);
-            if (String.IsNullOrEmpty(account.AccountNumber)) throw new AccountNotFoundError();
+            if (account == null) throw new AccountNotFoundError();
 
             if (!account.IsActive) throw new AccountBlockedError();
 
