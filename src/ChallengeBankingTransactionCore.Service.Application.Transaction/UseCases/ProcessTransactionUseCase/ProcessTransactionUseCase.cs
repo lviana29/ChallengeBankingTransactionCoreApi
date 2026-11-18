@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.Dto;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler.Exceptions;
@@ -8,12 +9,18 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         private readonly IAccountRepository _accountRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IMessagePublisherPort _messagePublisher;
-        public ProcessTransactionUseCase(IAccountRepository accountRepository, ITransactionRepository transactionRepository, IUnitOfWork unitOfWork, IMessagePublisherPort messagePublisher) {
+        private readonly IOutboxRepository _outboxRepository;
+
+        public ProcessTransactionUseCase(
+            IAccountRepository accountRepository,
+            ITransactionRepository transactionRepository,
+            IUnitOfWork unitOfWork,
+            IOutboxRepository outboxRepository
+        ) {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
             _unitOfWork = unitOfWork;
-            _messagePublisher = messagePublisher;
+            _outboxRepository = outboxRepository;
         }
         public async Task<string> ExecuteAsync(TransactionDto transactionDto) {
 
@@ -44,7 +51,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                     if (!account.IsActive) throw new AccountBlockedError();
 
                     Guid transactionId;
-                    string? description;
+                    string description;
                     decimal newBalance;
 
                     if ((TransactionTypeEntityEnum)transactionDto.transactionType == TransactionTypeEntityEnum.Debit) {
@@ -67,10 +74,8 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                         transactionId = _transactionRepository.ProcessTransactionAsync(account.Id, description, transactionDto.value, idempotencyKey, newBalance, transactionTypeId);
                     }
 
-                    var success = await _unitOfWork.CommitAsync();
-                    if (!success) throw new ProcessTransactionError();
-
-                    // --- DESacoplamento / CQRS: Publica o evento de transação criada de forma assíncrona ---
+                    // --- Transactional Outbox Pattern: Enfileira evento na mesma transação ACID ---
+                    var now = DateTime.UtcNow;
                     var transactionEvent = new TransactionCreatedEventEntity(
                         TransactionId: transactionId,
                         AccountId: account.Id,
@@ -79,11 +84,23 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                         BalanceAfter: newBalance,
                         TransactionType: description,
                         IdempotencyKey: idempotencyKey,
-                        CreatedAt: DateTime.UtcNow
+                        CreatedAt: now
                     );
 
-                    // Dispara a publicação (pode ser em background ou aguardar de forma resiliente)
-                    await _messagePublisher.PublishTransactionCreatedAsync(transactionEvent);
+                    var outboxMessage = new OutboxMessageEntity {
+                        Id = Guid.NewGuid(),
+                        EventType = nameof(TransactionCreatedEventEntity),
+                        Payload = JsonSerializer.Serialize(transactionEvent),
+                        CreatedAt = now,
+                        ProcessedAt = null,
+                        RetryCount = 0,
+                        LastError = null
+                    };
+
+                    _outboxRepository.AddOutboxMessage(outboxMessage);
+
+                    var success = await _unitOfWork.CommitAsync();
+                    if (!success) throw new ProcessTransactionError();
 
                     return transactionId.ToString();
                 }

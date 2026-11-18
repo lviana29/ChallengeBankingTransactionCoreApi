@@ -7,6 +7,7 @@ using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.ProcessTransactionUseCase;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository.Implementation;
 using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Repository;
+using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Workers;
 using ChallengeBankingTransactionCore.Service.Api.Transaction.Middlewares;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.GetConsolidatedStatementUseCase;
 
@@ -35,6 +36,7 @@ builder.Services.AddCorsConfiguration(builder.Configuration);
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IResiliencePolicyExecutorPort, PollyResiliencePolicyExecutorAdapter>();
 builder.Services.AddScoped<IGetConsolidatedStatementUseCase, GetConsolidatedStatementUseCase>();
@@ -42,6 +44,12 @@ builder.Services.AddScoped<IMessagePublisherPort, RabbitMQMessagePublisherAdapte
 
 // Use cases (Application)
 builder.Services.AddScoped<IProcessTransactionUseCase, ProcessTransactionUseCase>();
+
+// Background Workers (Configurable via Hosting:EnableOutboxRelay)
+var enableOutboxRelay = !bool.TryParse(builder.Configuration["Hosting:EnableOutboxRelay"], out var parsedEnableOutbox) || parsedEnableOutbox;
+if (enableOutboxRelay) {
+    builder.Services.AddHostedService<OutboxRelayHostedService>();
+}
 
 var app = builder.Build();
 
