@@ -8,10 +8,12 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         private readonly IAccountRepository _accountRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public ProcessTransactionUseCase(IAccountRepository accountRepository, ITransactionRepository transactionRepository, IUnitOfWork unitOfWork) {
+        private readonly IMessagePublisherPort _messagePublisher;
+        public ProcessTransactionUseCase(IAccountRepository accountRepository, ITransactionRepository transactionRepository, IUnitOfWork unitOfWork, IMessagePublisherPort messagePublisher) {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
             _unitOfWork = unitOfWork;
+            _messagePublisher = messagePublisher;
         }
         public async Task<string> ExecuteAsync(TransactionDto transactionDto) {
 
@@ -65,6 +67,18 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
 
                     var success = await _unitOfWork.CommitAsync();
                     if (!success) throw new ProcessTransactionError();
+
+                    // --- DESacoplamento / CQRS: Publica o evento de transação criada de forma assíncrona ---
+                    var transactionEvent = new TransactionCreatedEventEntity(
+                        TransactionId: transactionId,
+                        AccountId: account.Id,
+                        Amount: transactionDto.value,
+                        TransactionType: description,
+                        CreatedAt: DateTime.UtcNow
+                    );
+
+                    // Dispara a publicação (pode ser em background ou aguardar de forma resiliente)
+                    await _messagePublisher.PublishTransactionCreatedAsync(transactionEvent);
 
                     return transactionId.ToString();
                 }

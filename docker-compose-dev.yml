@@ -27,6 +27,23 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ChallengeBankingTransactionCore_RabbitMQ_Dev
+    ports:
+      - "5672:5672" # Porta padrão do RabbitMQ
+      - "15672:15672" # Painel web de gerenciamento (guest / guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - rede_ChallengeBanking
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     container_name: ChallengeBankingTransactionCore.Api.Transaction.Dev
     ports:

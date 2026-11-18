@@ -11,16 +11,19 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
         private readonly Mock<ITransactionRepository> _transactionRepositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly ProcessTransactionUseCase _useCase;
+        private readonly Mock<IMessagePublisherPort> _messagePublisher;
 
         public ProcessTransactionUseCaseTests() {
             _accountRepositoryMock = new Mock<IAccountRepository>();
             _transactionRepositoryMock = new Mock<ITransactionRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _messagePublisher = new Mock<IMessagePublisherPort>();
 
             _useCase = new ProcessTransactionUseCase(
                 _accountRepositoryMock.Object,
                 _transactionRepositoryMock.Object,
-                _unitOfWorkMock.Object
+                _unitOfWorkMock.Object,
+                _messagePublisher.Object
             );
         }
 

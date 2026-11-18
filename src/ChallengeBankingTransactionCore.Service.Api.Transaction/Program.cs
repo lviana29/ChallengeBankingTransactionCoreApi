@@ -38,6 +38,7 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IResiliencePolicyExecutorPort, PollyResiliencePolicyExecutorAdapter>();
 builder.Services.AddScoped<IGetConsolidatedStatementUseCase, GetConsolidatedStatementUseCase>();
+builder.Services.AddScoped<IMessagePublisherPort, RabbitMQMessagePublisherAdapter>();
 
 // Use cases (Application)
 builder.Services.AddScoped<IProcessTransactionUseCase, ProcessTransactionUseCase>();
