@@ -1,6 +1,7 @@
 using ChallengeBankingTransactionCore.Service.Application.Transaction.Dto;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler.Exceptions;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Utils;
 
 namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.GetConsolidatedStatementUseCase {
     public class GetConsolidatedStatementUseCase : IGetConsolidatedStatementUseCase {
@@ -8,21 +9,26 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         private readonly ITransactionRepository _transactionRepository;
         private readonly IConsolidatedCachePort? _cachePort;
         private readonly IDailyConsolidatedBalanceRepository? _dailyBalanceRepository;
+        private readonly IAppLogger<GetConsolidatedStatementUseCase>? _logger;
 
         public GetConsolidatedStatementUseCase(
             IAccountRepository accountRepository,
             ITransactionRepository transactionRepository,
             IConsolidatedCachePort? cachePort = null,
-            IDailyConsolidatedBalanceRepository? dailyBalanceRepository = null
+            IDailyConsolidatedBalanceRepository? dailyBalanceRepository = null,
+            IAppLogger<GetConsolidatedStatementUseCase>? logger = null
         ) {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
             _cachePort = cachePort;
             _dailyBalanceRepository = dailyBalanceRepository;
+            _logger = logger;
         }
 
         public async Task<ConsolidatedStatementDto> ExecuteAsync(ConsolidatedTransactionsFiltersDto filtersDto) {
             if (string.IsNullOrWhiteSpace(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
+
+            var maskedAccount = SensitiveDataMasker.MaskAccountNumber(filtersDto.AccountNumber);
 
             var startDate = filtersDto.StartDate;
             var endDate = filtersDto.EndDate;
@@ -63,6 +69,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
             if (_cachePort != null) {
                 var cachedStatement = await _cachePort.GetAsync<ConsolidatedStatementDto>(cacheKey);
                 if (cachedStatement != null) {
+                    _logger?.LogInformation("Consolidated statement Cache Hit for account {MaskedAccount}.", maskedAccount);
                     return cachedStatement;
                 }
             }
@@ -115,6 +122,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 await _cachePort.SetAsync(cacheKey, statementDto, TimeSpan.FromSeconds(60));
             }
 
+            _logger?.LogInformation("Consolidated statement computed (Cache Miss) for account {MaskedAccount}.", maskedAccount);
             return statementDto;
         }
     }

@@ -1,6 +1,7 @@
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler.Exceptions;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Utils;
 
 namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.ProcessTransactionEventUseCase {
     public class ProcessTransactionEventUseCase : IProcessTransactionEventUseCase {
@@ -27,20 +28,22 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 throw new ConsolidateStatementError();
             }
 
+            var maskedAccount = SensitiveDataMasker.MaskAccountNumber(transactionEvent.AccountNumber);
+
             var alreadyProcessed = await _dailyBalanceRepository.HasEventBeenProcessedAsync(transactionEvent.TransactionId, cancellationToken);
             if (alreadyProcessed) {
-                _logger.LogInformation("Event {TransactionId} already processed in Inbox. Ignoring duplicate.", transactionEvent.TransactionId);
+                _logger.LogInformation("Event {TransactionId} for account {MaskedAccount} already processed in Inbox. Ignoring duplicate.", transactionEvent.TransactionId, maskedAccount);
                 return false;
             }
 
             var updated = await _dailyBalanceRepository.UpsertDailyBalanceWithInboxAsync(transactionEvent, cancellationToken);
             if (!updated) {
-                _logger.LogInformation("Event {TransactionId} already processed concurrently in Inbox. Ignoring duplicate.", transactionEvent.TransactionId);
+                _logger.LogInformation("Event {TransactionId} for account {MaskedAccount} already processed concurrently in Inbox. Ignoring duplicate.", transactionEvent.TransactionId, maskedAccount);
                 return false;
             }
 
             await _cachePort.InvalidateByAccountAsync(transactionEvent.AccountNumber, cancellationToken);
-            _logger.LogInformation("Consolidated daily balance for Account {AccountNumber} on event {TransactionId}.", transactionEvent.AccountNumber, transactionEvent.TransactionId);
+            _logger.LogInformation("Consolidated daily balance for Account {MaskedAccount} on event {TransactionId}.", maskedAccount, transactionEvent.TransactionId);
             return true;
         }
     }

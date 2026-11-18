@@ -3,6 +3,7 @@ using ChallengeBankingTransactionCore.Service.Application.Transaction.Dto;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler.Exceptions;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Utils;
 
 namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.ProcessTransactionUseCase {
     public class ProcessTransactionUseCase : IProcessTransactionUseCase {
@@ -10,17 +11,20 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IOutboxRepository _outboxRepository;
+        private readonly IAppLogger<ProcessTransactionUseCase>? _logger;
 
         public ProcessTransactionUseCase(
             IAccountRepository accountRepository,
             ITransactionRepository transactionRepository,
             IUnitOfWork unitOfWork,
-            IOutboxRepository outboxRepository
+            IOutboxRepository outboxRepository,
+            IAppLogger<ProcessTransactionUseCase>? logger = null
         ) {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
             _unitOfWork = unitOfWork;
             _outboxRepository = outboxRepository;
+            _logger = logger;
         }
         public async Task<string> ExecuteAsync(TransactionDto transactionDto) {
 
@@ -28,13 +32,18 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
 
             if (transactionDto.value <= 0) throw new InvalidTransactionValueError();
 
+            var maskedAccount = SensitiveDataMasker.MaskAccountNumber(transactionDto.accountNumber);
+
             Guid idempotencyKey = Guid.TryParse(transactionDto.idempotencyKey, out var parsedIdempotencyKey)
                 ? parsedIdempotencyKey
                 : Guid.NewGuid();
 
             var existingTransaction = await _transactionRepository.GetByIdempotency(idempotencyKey);
 
-            if (existingTransaction != null) return existingTransaction.Id.ToString();
+            if (existingTransaction != null) {
+                _logger?.LogInformation("Idempotent transaction hit for account {MaskedAccount} with IdempotencyKey {IdempotencyKey}.", maskedAccount, idempotencyKey);
+                return existingTransaction.Id.ToString();
+            }
 
             Guid transactionTypeId = transactionDto.transactionType switch {
                 1 => TransactionTypeConstants.CreditId,
@@ -102,9 +111,11 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                     var success = await _unitOfWork.CommitAsync();
                     if (!success) throw new ProcessTransactionError();
 
+                    _logger?.LogInformation("Processed transaction {TransactionId} ({TransactionType}) for account {MaskedAccount}.", transactionId, description, maskedAccount);
                     return transactionId.ToString();
                 }
                 catch (AccountConcurrencyConflictException) {
+                    _logger?.LogWarning("Concurrency conflict on account {MaskedAccount} (Attempt {Attempt}/{MaxRetries}).", maskedAccount, attempt, maxRetries);
                     if (attempt == maxRetries) {
                         throw;
                     }

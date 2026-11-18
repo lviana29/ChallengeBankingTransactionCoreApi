@@ -52,6 +52,9 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             Assert.True(result);
             _dailyBalanceRepoMock.Verify(r => r.UpsertDailyBalanceWithInboxAsync(txEvent, It.IsAny<CancellationToken>()), Times.Once);
             _cachePortMock.Verify(c => c.InvalidateByAccountAsync("12345-6", It.IsAny<CancellationToken>()), Times.Once);
+            _loggerMock.Verify(l => l.LogInformation(
+                It.IsAny<string>(),
+                It.Is<object[]>(args => args.Contains("12***-6") && !args.Contains("12345-6"))), Times.Once);
         }
 
         [Fact]
@@ -83,6 +86,9 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             Assert.True(result);
             _dailyBalanceRepoMock.Verify(r => r.UpsertDailyBalanceWithInboxAsync(txEvent, It.IsAny<CancellationToken>()), Times.Once);
             _cachePortMock.Verify(c => c.InvalidateByAccountAsync("12345-6", It.IsAny<CancellationToken>()), Times.Once);
+            _loggerMock.Verify(l => l.LogInformation(
+                It.IsAny<string>(),
+                It.Is<object[]>(args => args.Contains("12***-6") && !args.Contains("12345-6"))), Times.Once);
         }
 
         [Fact]

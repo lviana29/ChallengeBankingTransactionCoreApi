@@ -43,6 +43,7 @@ else {
 }
 
 builder.Services.AddCorsConfiguration(builder.Configuration);
+builder.Services.AddSecurityConfiguration(builder.Configuration);
 
 // Repositories (Infrastructure)
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
@@ -84,6 +85,7 @@ app.UseRouting();
 
 app.UseCorsConfiguration(builder.Configuration);
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

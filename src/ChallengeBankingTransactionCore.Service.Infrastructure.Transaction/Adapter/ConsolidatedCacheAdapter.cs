@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Interface;
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Utils;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -30,7 +31,8 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
                 }
             }
             catch (Exception ex) {
-                _logger.LogWarning("Distributed cache unavailable when reading version for account {AccountNumber}. Falling back to MemoryCache: {ErrorMessage}", accountNumber, ex.Message);
+                var maskedAccount = SensitiveDataMasker.MaskAccountNumber(accountNumber);
+                _logger.LogWarning("Distributed cache unavailable when reading version for account {AccountNumber}. Falling back to MemoryCache: {ErrorMessage}", maskedAccount, ex.Message);
             }
 
             if (_memoryCache.TryGetValue<string>(versionKey, out var memVersion) && !string.IsNullOrWhiteSpace(memVersion)) {
@@ -55,6 +57,15 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
             return rawKey;
         }
 
+        private static string MaskCacheKey(string key) {
+            var parts = key.Split(':', 4);
+            if (parts.Length >= 3) {
+                parts[2] = SensitiveDataMasker.MaskAccountNumber(parts[2]);
+                return string.Join(':', parts);
+            }
+            return key;
+        }
+
         public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class {
             var versionedKey = await ResolveVersionedKeyAsync(key, cancellationToken);
 
@@ -69,7 +80,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
                 }
             }
             catch (Exception ex) {
-                _logger.LogWarning("Distributed cache unavailable on GetAsync for key {CacheKey}. Falling back to MemoryCache: {ErrorMessage}", versionedKey, ex.Message);
+                _logger.LogWarning("Distributed cache unavailable on GetAsync for key {CacheKey}. Falling back to MemoryCache: {ErrorMessage}", MaskCacheKey(versionedKey), ex.Message);
             }
 
             if (_memoryCache.TryGetValue<T>(versionedKey, out var cachedValue)) {
@@ -92,7 +103,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
                 await _distributedCache.SetStringAsync(versionedKey, json, options, cancellationToken);
             }
             catch (Exception ex) {
-                _logger.LogWarning("Distributed cache unavailable on SetAsync for key {CacheKey}. Cached in MemoryCache only: {ErrorMessage}", versionedKey, ex.Message);
+                _logger.LogWarning("Distributed cache unavailable on SetAsync for key {CacheKey}. Cached in MemoryCache only: {ErrorMessage}", MaskCacheKey(versionedKey), ex.Message);
             }
         }
 
@@ -109,7 +120,8 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
                 await _distributedCache.SetStringAsync(versionKey, newVersion, options, cancellationToken);
             }
             catch (Exception ex) {
-                _logger.LogWarning("Distributed cache unavailable on InvalidateByAccountAsync for account {AccountNumber}. Updated version in MemoryCache: {ErrorMessage}", accountNumber, ex.Message);
+                var maskedAccount = SensitiveDataMasker.MaskAccountNumber(accountNumber);
+                _logger.LogWarning("Distributed cache unavailable on InvalidateByAccountAsync for account {AccountNumber}. Updated version in MemoryCache: {ErrorMessage}", maskedAccount, ex.Message);
             }
         }
     }

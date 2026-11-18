@@ -1,9 +1,11 @@
 using ChallengeBankingTransactionCore.Service.Application.Transaction.Dto;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.GetConsolidatedStatementUseCase;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Controllers.V1 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]/v1")]
     public class ConsolidatedStatementController : ControllerBase {
         private readonly IGetConsolidatedStatementUseCase _getConsolidatedStatementUseCase;
