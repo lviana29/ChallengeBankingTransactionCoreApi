@@ -1,6 +1,6 @@
 # Relatório de Teste de Carga — Posição Consolidada Diária (50+ req/s)
 
-**Requisito Oficial:** `RNF-02` e Critério `6.3` ([ESCOPO_GLOBAL_CONSOLIDADO.md](../../../ESCOPO_GLOBAL_CONSOLIDADO.md))  
+**Requisito Oficial:** Foco em arquitetura, resiliência para controle de lançamentos, picos de 50 req/s, segurança e testes.  
 **Meta Oficial:** Sustentar pico de **50 requisições por segundo** no serviço de consolidado diário com **no máximo 5% de perda de requisições** (`http_req_failed < 0.05`).  
 **Script de Teste:** [k6-consolidated-balance.js](k6-consolidated-balance.js)
 
