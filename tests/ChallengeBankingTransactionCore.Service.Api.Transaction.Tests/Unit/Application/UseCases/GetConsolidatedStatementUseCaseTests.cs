@@ -13,12 +13,21 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
     public class GetConsolidatedStatementUseCaseTests {
         private readonly Mock<IAccountRepository> _accountRepositoryMock;
         private readonly Mock<ITransactionRepository> _transactionRepositoryMock;
+        private readonly Mock<IConsolidatedCachePort> _cachePortMock;
+        private readonly Mock<IDailyConsolidatedBalanceRepository> _dailyBalanceRepositoryMock;
         private readonly GetConsolidatedStatementUseCase _useCase;
 
         public GetConsolidatedStatementUseCaseTests() {
             _accountRepositoryMock = new Mock<IAccountRepository>();
             _transactionRepositoryMock = new Mock<ITransactionRepository>();
-            _useCase = new GetConsolidatedStatementUseCase(_accountRepositoryMock.Object, _transactionRepositoryMock.Object);
+            _cachePortMock = new Mock<IConsolidatedCachePort>();
+            _dailyBalanceRepositoryMock = new Mock<IDailyConsolidatedBalanceRepository>();
+            _useCase = new GetConsolidatedStatementUseCase(
+                _accountRepositoryMock.Object,
+                _transactionRepositoryMock.Object,
+                _cachePortMock.Object,
+                _dailyBalanceRepositoryMock.Object
+            );
         }
 
         [Theory(DisplayName = "Should throw InvalidAccountNumber when AccountNumber is null, empty or whitespace")]
@@ -287,6 +296,116 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             Assert.Single(result.consolidatedTransactions);
 
             _transactionRepositoryMock.Verify(repo => repo.GetBalanceAtDateAsync(accountId, endDate), Times.Once);
+        }
+
+        [Fact(DisplayName = "Should return directly from cache without querying database on Cache Hit")]
+        public async Task ExecuteAsync_ShouldReturnFromCacheWithoutCallingRepositories_OnCacheHit() {
+            // Arrange
+            var accountNumber = "12345-6";
+            var filters = new ConsolidatedTransactionsFiltersDto(accountNumber, null, null);
+            var cachedDto = new ConsolidatedStatementDto(
+                accountNumber,
+                2500.00m,
+                2500.00m,
+                DateTime.UtcNow,
+                new List<ConsolidatedTransactionsDto>()
+            );
+
+            _cachePortMock
+                .Setup(c => c.GetAsync<ConsolidatedStatementDto>(It.Is<string>(k => k.Contains("12345-6") && k.EndsWith("default-10d")), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(cachedDto);
+
+            // Act
+            var result = await _useCase.ExecuteAsync(filters);
+
+            // Assert
+            Assert.Same(cachedDto, result);
+            _accountRepositoryMock.Verify(r => r.GetByAccountNumber(It.IsAny<string>()), Times.Never);
+            _transactionRepositoryMock.Verify(r => r.GetRangeByAccountNumber(It.IsAny<Guid>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()), Times.Never);
+            _cachePortMock.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<ConsolidatedStatementDto>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact(DisplayName = "Should query Read Model and populate cache on Cache Miss")]
+        public async Task ExecuteAsync_ShouldUseDailyConsolidatedReadModelAndPopulateCache_OnCacheMiss() {
+            // Arrange
+            var accountNumber = "12345-6";
+            var accountId = Guid.NewGuid();
+            var startDate = new DateTime(2026, 9, 1);
+            var endDate = new DateTime(2026, 9, 10); // Midnight (TimeSpan.Zero)
+            var filters = new ConsolidatedTransactionsFiltersDto(accountNumber, startDate, endDate);
+
+            _cachePortMock
+                .Setup(c => c.GetAsync<ConsolidatedStatementDto>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((ConsolidatedStatementDto?)null);
+
+            _accountRepositoryMock
+                .Setup(r => r.GetByAccountNumber(accountNumber))
+                .ReturnsAsync(new AccountEntity {
+                    Id = accountId,
+                    AccountNumber = accountNumber,
+                    Balance = 5000.00m,
+                    IsActive = true
+                });
+
+            _transactionRepositoryMock
+                .Setup(r => r.GetRangeByAccountNumber(accountId, startDate, endDate))
+                .ReturnsAsync(new List<TransactionEntity>());
+
+            _dailyBalanceRepositoryMock
+                .Setup(d => d.GetDailyBalanceAsync(accountId, endDate.Date, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DailyConsolidatedBalanceEntity {
+                    AccountId = accountId,
+                    AccountNumber = accountNumber,
+                    BalanceDate = endDate.Date,
+                    ClosingBalance = 4100.00m
+                });
+
+            // Act
+            var result = await _useCase.ExecuteAsync(filters);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(4100.00m, result.consolidatedBalance);
+            Assert.Equal(5000.00m, result.currentBalance);
+            _transactionRepositoryMock.Verify(r => r.GetBalanceAtDateAsync(It.IsAny<Guid>(), It.IsAny<DateTime>()), Times.Never);
+            _cachePortMock.Verify(c => c.SetAsync(
+                It.Is<string>(k => k.Contains("12345-6")),
+                It.IsAny<ConsolidatedStatementDto>(),
+                TimeSpan.FromSeconds(60),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact(DisplayName = "Should return 0.00m when retroactive balance is null and Read Model is empty")]
+        public async Task ExecuteAsync_ShouldReturnZeroConsolidatedBalance_WhenNoHistoricalTransactionsExist() {
+            // Arrange
+            var accountNumber = "12345-6";
+            var accountId = Guid.NewGuid();
+            var startDate = new DateTime(2026, 1, 1);
+            var endDate = new DateTime(2026, 1, 5);
+            var filters = new ConsolidatedTransactionsFiltersDto(accountNumber, startDate, endDate);
+
+            _accountRepositoryMock
+                .Setup(r => r.GetByAccountNumber(accountNumber))
+                .ReturnsAsync(new AccountEntity {
+                    Id = accountId,
+                    AccountNumber = accountNumber,
+                    Balance = 1000.00m,
+                    IsActive = true
+                });
+
+            _transactionRepositoryMock
+                .Setup(r => r.GetRangeByAccountNumber(accountId, startDate, endDate))
+                .ReturnsAsync(new List<TransactionEntity>());
+
+            _transactionRepositoryMock
+                .Setup(r => r.GetBalanceAtDateAsync(accountId, endDate))
+                .ReturnsAsync((decimal?)null);
+
+            // Act
+            var result = await _useCase.ExecuteAsync(filters);
+
+            // Assert
+            Assert.Equal(0.00m, result.consolidatedBalance);
         }
     }
 }

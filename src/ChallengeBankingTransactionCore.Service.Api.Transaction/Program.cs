@@ -30,7 +30,17 @@ builder.Services.AddRouteConfiguration();
 
 builder.Services.AddDataProtection();
 builder.Services.AddMemoryCache();
-builder.Services.AddDistributedMemoryCache();
+
+var redisConnection = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrWhiteSpace(redisConnection)) {
+    builder.Services.AddStackExchangeRedisCache(options => {
+        options.Configuration = redisConnection;
+        options.InstanceName = "BankingCore:";
+    });
+}
+else {
+    builder.Services.AddDistributedMemoryCache();
+}
 
 builder.Services.AddCorsConfiguration(builder.Configuration);
 

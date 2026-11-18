@@ -6,16 +6,24 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
     public class GetConsolidatedStatementUseCase : IGetConsolidatedStatementUseCase {
         private readonly IAccountRepository _accountRepository;
         private readonly ITransactionRepository _transactionRepository;
-        public GetConsolidatedStatementUseCase(IAccountRepository accountRepository, ITransactionRepository transactionRepository) {
+        private readonly IConsolidatedCachePort? _cachePort;
+        private readonly IDailyConsolidatedBalanceRepository? _dailyBalanceRepository;
+
+        public GetConsolidatedStatementUseCase(
+            IAccountRepository accountRepository,
+            ITransactionRepository transactionRepository,
+            IConsolidatedCachePort? cachePort = null,
+            IDailyConsolidatedBalanceRepository? dailyBalanceRepository = null
+        ) {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
+            _cachePort = cachePort;
+            _dailyBalanceRepository = dailyBalanceRepository;
         }
 
         public async Task<ConsolidatedStatementDto> ExecuteAsync(ConsolidatedTransactionsFiltersDto filtersDto) {
             if (string.IsNullOrWhiteSpace(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
 
-            var account = await _accountRepository.GetByAccountNumber(filtersDto.AccountNumber);
-            if (account == null) throw new AccountNotFoundError();
             var startDate = filtersDto.StartDate;
             var endDate = filtersDto.EndDate;
 
@@ -46,17 +54,46 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 throw new InvalidDateRangeException();
             }
 
-            // 3. Busca transações dentro do intervalo protegido
+            // 3. Consulta Cache-Aside (L1/L2) antes de acionar o banco relacional
+            var keySuffix = (!startDate.HasValue && !endDate.HasValue)
+                ? "default-10d"
+                : $"{effectiveStartDate:yyyyMMddHHmmss}:{effectiveEndDate:yyyyMMddHHmmss}";
+            var cacheKey = $"consolidated:v1:{filtersDto.AccountNumber}:{keySuffix}";
+
+            if (_cachePort != null) {
+                var cachedStatement = await _cachePort.GetAsync<ConsolidatedStatementDto>(cacheKey);
+                if (cachedStatement != null) {
+                    return cachedStatement;
+                }
+            }
+
+            var account = await _accountRepository.GetByAccountNumber(filtersDto.AccountNumber);
+            if (account == null) throw new AccountNotFoundError();
+
+            // 4. Busca transações dentro do intervalo protegido
             var transactions = await _transactionRepository.GetRangeByAccountNumber(account.Id, effectiveStartDate, effectiveEndDate);
 
-            // 4. Saldo consolidado no momento da data de corte (effectiveEndDate)
+            // 5. Saldo consolidado no momento da data de corte (effectiveEndDate)
             decimal consolidatedBalance;
             if (effectiveEndDate.Date < DateTime.UtcNow.Date) {
-                var historicalBalance = await _transactionRepository.GetBalanceAtDateAsync(account.Id, effectiveEndDate);
-                consolidatedBalance = historicalBalance ?? 0.00m;
+                var dailyReadModel = _dailyBalanceRepository != null
+                    ? await _dailyBalanceRepository.GetDailyBalanceAsync(account.Id, effectiveEndDate.Date)
+                    : null;
+
+                if (dailyReadModel != null && effectiveEndDate.TimeOfDay == TimeSpan.Zero) {
+                    consolidatedBalance = dailyReadModel.ClosingBalance;
+                }
+                else {
+                    var historicalBalance = await _transactionRepository.GetBalanceAtDateAsync(account.Id, effectiveEndDate);
+                    consolidatedBalance = historicalBalance ?? 0.00m;
+                }
             }
             else {
-                consolidatedBalance = account.Balance;
+                var todayReadModel = _dailyBalanceRepository != null
+                    ? await _dailyBalanceRepository.GetDailyBalanceAsync(account.Id, effectiveEndDate.Date)
+                    : null;
+
+                consolidatedBalance = todayReadModel != null ? todayReadModel.ClosingBalance : account.Balance;
             }
 
             var consolidateTransactions = new List<ConsolidatedTransactionsDto>();
@@ -66,7 +103,19 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                 consolidateTransactions.Add(consolidateT);
             });
 
-            return new ConsolidatedStatementDto(filtersDto.AccountNumber, consolidatedBalance, account.Balance, effectiveEndDate, consolidateTransactions);
+            var statementDto = new ConsolidatedStatementDto(
+                filtersDto.AccountNumber,
+                consolidatedBalance,
+                account.Balance,
+                effectiveEndDate,
+                consolidateTransactions
+            );
+
+            if (_cachePort != null) {
+                await _cachePort.SetAsync(cacheKey, statementDto, TimeSpan.FromSeconds(60));
+            }
+
+            return statementDto;
         }
     }
 }
