@@ -25,5 +25,55 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
             // Como configuramos MaxRetryAttempts = 3, ele deve tentar a original + 3 retries = 4 execuções no total
             Assert.Equal(4, executionAttempts);
         }
+
+        [Theory]
+        [InlineData("Connection timeout expired", 2)]
+        [InlineData("Lost connection to MySQL server", 2)]
+        [InlineData("MySQL server has gone away", 2)]
+        [InlineData("Non-transient constraint violation", 1)]
+        public async Task ExecuteAsyncWithoutResult_ShouldHandleTransientAndNonTransientExceptions(string errorMessage, int expectedAttempts) {
+            // Arrange
+            var executor = new PollyResiliencePolicyExecutorAdapter();
+            var attempts = 0;
+
+            // Act
+            if (expectedAttempts > 1) {
+                await executor.ExecuteAsyncWithoutResult(() => {
+                    attempts++;
+                    if (attempts == 1) {
+                        throw new DbUpdateException("DB error", new Exception(errorMessage));
+                    }
+                    return Task.CompletedTask;
+                });
+            }
+            else {
+                await Assert.ThrowsAsync<DbUpdateException>(async () => {
+                    await executor.ExecuteAsyncWithoutResult(() => {
+                        attempts++;
+                        throw new DbUpdateException("DB error", new Exception(errorMessage));
+                    });
+                });
+            }
+
+            // Assert
+            Assert.Equal(expectedAttempts, attempts);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_ShouldNotRetry_WhenInnerExceptionIsNull() {
+            // Arrange
+            var executor = new PollyResiliencePolicyExecutorAdapter();
+            var attempts = 0;
+
+            // Act & Assert
+            await Assert.ThrowsAsync<DbUpdateException>(async () => {
+                await executor.ExecuteAsync<bool>(() => {
+                    attempts++;
+                    throw new DbUpdateException("No inner exception");
+                });
+            });
+
+            Assert.Equal(1, attempts);
+        }
     }
 }

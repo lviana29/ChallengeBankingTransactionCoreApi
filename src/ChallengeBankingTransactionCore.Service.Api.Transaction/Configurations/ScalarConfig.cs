@@ -1,6 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using Scalar.AspNetCore;
 
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Configurations {
+    [ExcludeFromCodeCoverage]
     public static class ScalarConfig {
 
         private static readonly string _AppName = "Challenge Banking Transaction Core API";

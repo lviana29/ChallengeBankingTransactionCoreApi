@@ -257,5 +257,48 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Api
             // Assert
             Assert.NotNull(provider);
         }
+
+        [Fact]
+        public async Task UseCorsConfiguration_ShouldReturn403Forbidden_WhenOriginIsDisallowed_AndAllowWhenOriginIsAllowedOrEmpty() {
+            // Arrange
+            var builder = WebApplication.CreateBuilder();
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> {
+                ["Cors:Origins:0"] = "http://localhost:3000"
+            });
+            builder.Services.AddCorsConfiguration(builder.Configuration);
+
+            await using var app = builder.Build();
+            app.UseCorsConfiguration(builder.Configuration);
+
+            var nextCalled = 0;
+            app.Run(ctx => {
+                nextCalled++;
+                ctx.Response.StatusCode = StatusCodes.Status200OK;
+                return Task.CompletedTask;
+            });
+
+            var pipeline = ((IApplicationBuilder)app).Build();
+
+            // Act 1: Disallowed origin -> 403
+            var disallowedContext = new DefaultHttpContext();
+            disallowedContext.Request.Headers["Origin"] = "http://malicious.site.com";
+            disallowedContext.Response.Body = new MemoryStream();
+            await pipeline(disallowedContext);
+
+            // Act 2: Allowed origin -> 200
+            var allowedContext = new DefaultHttpContext();
+            allowedContext.Request.Headers["Origin"] = "http://localhost:3000";
+            await pipeline(allowedContext);
+
+            // Act 3: Empty origin -> 200
+            var emptyOriginContext = new DefaultHttpContext();
+            await pipeline(emptyOriginContext);
+
+            // Assert
+            Assert.Equal(StatusCodes.Status403Forbidden, disallowedContext.Response.StatusCode);
+            Assert.Equal(StatusCodes.Status200OK, allowedContext.Response.StatusCode);
+            Assert.Equal(StatusCodes.Status200OK, emptyOriginContext.Response.StatusCode);
+            Assert.Equal(2, nextCalled);
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,6 +9,7 @@ using MySql.Data.MySqlClient;
 
 namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Configurations;
 
+[ExcludeFromCodeCoverage]
 public static class EvolveConfig {
     public static IServiceCollection AddEvolveConfiguration(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment) {
         if (environment.IsDevelopment()) {

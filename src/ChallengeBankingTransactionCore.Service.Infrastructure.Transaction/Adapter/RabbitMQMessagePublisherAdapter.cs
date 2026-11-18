@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities;
@@ -21,6 +22,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
             _configuration = configuration;
         }
 
+        [ExcludeFromCodeCoverage]
         protected virtual async Task<IConnection> GetOrCreateConnectionAsync(CancellationToken cancellationToken = default) {
             if (_connection is { IsOpen: true }) {
                 return _connection;

@@ -10,9 +10,11 @@ using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.C
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.IntegrationTests.Tools {
     public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram> where TProgram : class {
         private readonly string _connectionString;
+        private readonly IDictionary<string, string?>? _overrideConfig;
 
-        public CustomWebApplicationFactory(string connectionString) {
+        public CustomWebApplicationFactory(string connectionString, IDictionary<string, string?>? overrideConfig = null) {
             _connectionString = connectionString;
+            _overrideConfig = overrideConfig;
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder) {
@@ -20,6 +22,9 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Integrat
                 var testConfigPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "appsettings.Test.json");
                 config.Sources.Clear();
                 config.AddJsonFile(testConfigPath, optional: false, reloadOnChange: true);
+                if (_overrideConfig != null) {
+                    config.AddInMemoryCollection(_overrideConfig);
+                }
             });
             builder.ConfigureServices(services => {
                 var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));

@@ -23,10 +23,14 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
         private async Task<string> GetAccountVersionAsync(string accountNumber, CancellationToken cancellationToken) {
             var versionKey = $"account-version:{accountNumber}";
 
+            if (_memoryCache.TryGetValue<string>(versionKey, out var memVersion) && !string.IsNullOrWhiteSpace(memVersion)) {
+                return memVersion;
+            }
+
             try {
                 var distributedVersion = await _distributedCache.GetStringAsync(versionKey, cancellationToken);
                 if (!string.IsNullOrWhiteSpace(distributedVersion)) {
-                    _memoryCache.Set(versionKey, distributedVersion, TimeSpan.FromHours(1));
+                    _memoryCache.Set(versionKey, distributedVersion, TimeSpan.FromSeconds(10));
                     return distributedVersion;
                 }
             }
@@ -35,12 +39,8 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
                 _logger.LogWarning("Distributed cache unavailable when reading version for account {AccountNumber}. Falling back to MemoryCache: {ErrorMessage}", maskedAccount, ex.Message);
             }
 
-            if (_memoryCache.TryGetValue<string>(versionKey, out var memVersion) && !string.IsNullOrWhiteSpace(memVersion)) {
-                return memVersion;
-            }
-
             var initialVersion = "v1";
-            _memoryCache.Set(versionKey, initialVersion, TimeSpan.FromHours(1));
+            _memoryCache.Set(versionKey, initialVersion, TimeSpan.FromSeconds(10));
             return initialVersion;
         }
 
@@ -69,6 +69,10 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
         public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class {
             var versionedKey = await ResolveVersionedKeyAsync(key, cancellationToken);
 
+            if (_memoryCache.TryGetValue<T>(versionedKey, out var cachedValue) && cachedValue != null) {
+                return cachedValue;
+            }
+
             try {
                 var json = await _distributedCache.GetStringAsync(versionedKey, cancellationToken);
                 if (!string.IsNullOrWhiteSpace(json)) {
@@ -81,10 +85,6 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
             }
             catch (Exception ex) {
                 _logger.LogWarning("Distributed cache unavailable on GetAsync for key {CacheKey}. Falling back to MemoryCache: {ErrorMessage}", MaskCacheKey(versionedKey), ex.Message);
-            }
-
-            if (_memoryCache.TryGetValue<T>(versionedKey, out var cachedValue)) {
-                return cachedValue;
             }
 
             return null;

@@ -15,8 +15,9 @@ BASE_COMPOSE="docker-compose.yml"
 MYSQL_CONTAINER_NAME="ChallengeBankingTransactionCore_MySQL_Dev"
 
 usage() {
-    echo -e "${YELLOW}Uso: $0 {dev} {build|up|down|logs} [versao]{NC}"
+    echo -e "${YELLOW}Uso: $0 {dev} {build|up|down|logs|loadtest} [versao]{NC}"
     echo -e "${YELLOW}Exemplo DEV:  $0 dev up${NC}"
+    echo -e "${YELLOW}Exemplo LOAD: $0 dev loadtest${NC}"
     exit 1
 }
 
@@ -79,7 +80,16 @@ case "$ACTION" in
         docker compose -f $BASE_COMPOSE -f $SPECIFIC_COMPOSE up -d --build
 
         echo -e "${GREEN}✅ Ambiente local rodando com sucesso!${NC}"
-        echo -e "${GREEN}📍 API disponível em: http://localhost:3030${NC}"
+        echo -e "${GREEN}📍 API disponível em: http://localhost:3050/scalar/v1${NC}"
+        ;;
+
+    loadtest)
+        echo -e "${YELLOW}⚡ Executando teste de carga (55 req/s) no endpoint de consolidado diário...${NC}"
+        if command -v k6 &> /dev/null; then
+            k6 run tests/load/k6-consolidated-balance.js
+        else
+            docker run --rm -i --network ${NETWORK_NAME} -e BASE_URL="http://api:8080" -v "$(pwd)/tests/load:/scripts" grafana/k6 run /scripts/k6-consolidated-balance.js
+        fi
         ;;
 
     down)

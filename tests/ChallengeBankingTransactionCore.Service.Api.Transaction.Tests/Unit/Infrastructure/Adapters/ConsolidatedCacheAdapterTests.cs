@@ -55,6 +55,30 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
             Assert.NotNull(result);
             Assert.Equal("12345-6", result.accountNumber);
             Assert.Equal(1500m, result.consolidatedBalance);
+
+            // Second call hits L1 MemoryCache directly without querying DistributedCache again
+            var l1Result = await _adapter.GetAsync<ConsolidatedStatementDto>("consolidated:v1:12345-6:default-10d");
+            Assert.NotNull(l1Result);
+            Assert.Equal(1500m, l1Result.consolidatedBalance);
+        }
+
+        [Fact]
+        public async Task GetAsync_ShouldFallbackToMemoryCache_WhenDistributedCacheThrowsOnGetAsync() {
+            // Arrange
+            _distributedCacheMock
+                .Setup(d => d.GetAsync("account-version:55555-5", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Encoding.UTF8.GetBytes("v1"));
+
+            _distributedCacheMock
+                .Setup(d => d.GetAsync("consolidated:v1:55555-5:ver:v1:default-10d", It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Redis read error"));
+
+            // Act
+            var result = await _adapter.GetAsync<ConsolidatedStatementDto>("consolidated:v1:55555-5:default-10d");
+
+            // Assert
+            Assert.Null(result);
+            _loggerMock.Verify(l => l.LogWarning(It.IsAny<string>(), It.IsAny<object[]>()), Times.Once);
         }
 
         [Fact]

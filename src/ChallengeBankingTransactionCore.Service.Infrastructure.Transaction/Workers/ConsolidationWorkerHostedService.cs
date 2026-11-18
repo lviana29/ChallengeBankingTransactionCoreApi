@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using ChallengeBankingTransactionCore.Service.Application.Transaction.UseCases.ProcessTransactionEventUseCase;
@@ -64,6 +65,7 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Wor
             }
         }
 
+        [ExcludeFromCodeCoverage]
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             await Task.Yield();
 
