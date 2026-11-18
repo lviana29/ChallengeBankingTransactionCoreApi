@@ -43,12 +43,14 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Dom
         [Fact]
         public void DateSerializer_ShouldWriteNull_WhenValueIsNull() {
             // Arrange
-            var options = new JsonSerializerOptions {
-                Converters = { new DateSerializer() }
-            };
+            var converter = new DateSerializer();
+            using var stream = new MemoryStream();
+            using var writer = new Utf8JsonWriter(stream);
 
             // Act
-            var jsonString = JsonSerializer.Serialize((DateTime?)null, options);
+            converter.Write(writer, null, new JsonSerializerOptions());
+            writer.Flush();
+            var jsonString = System.Text.Encoding.UTF8.GetString(stream.ToArray());
 
             // Assert
             Assert.Equal("null", jsonString);

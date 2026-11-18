@@ -13,6 +13,16 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
         }
 
         [Fact]
+        public void LogWarning_ShouldNotThrowException() {
+            // Arrange
+            var adapter = new SerilogAdapter<SerilogAdapterTests>();
+
+            // Act & Assert
+            var exception = Record.Exception(() => adapter.LogWarning("Warning log message {Param}", "Value"));
+            Assert.Null(exception);
+        }
+
+        [Fact]
         public void LogError_ShouldNotThrowException() {
             // Arrange
             var adapter = new SerilogAdapter<SerilogAdapterTests>();

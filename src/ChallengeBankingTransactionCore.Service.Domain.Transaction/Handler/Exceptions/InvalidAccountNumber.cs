@@ -2,6 +2,6 @@ namespace ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler.Exc
     public class InvalidAccountNumber : DomainException {
         public override string ErrorCode => "CORE_BANKING_007";
 
-        public InvalidAccountNumber() : base("Invalid account number", statusCode: 403, typeReturn: "warning") { }
+        public InvalidAccountNumber() : base("Invalid account number", statusCode: 422, typeReturn: "warning") { }
     }
 }

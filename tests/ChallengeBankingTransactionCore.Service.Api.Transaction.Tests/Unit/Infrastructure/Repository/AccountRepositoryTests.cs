@@ -56,5 +56,32 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Inf
             // Assert
             Assert.Null(result);
         }
+
+        [Fact]
+        public async Task UpdateAccount_ShouldAdaptAccountAndInvokeGenericRepositoryUpdateWithSaveChangesFalse() {
+            // Arrange
+            using var context = new AppDbContext(_dbContextOptions);
+            var genericRepoMock = new Mock<IGenericRepository<Account>>();
+            var repository = new AccountRepository(context, genericRepoMock.Object);
+
+            var accountEntity = new ChallengeBankingTransactionCore.Service.Domain.Transaction.Entities.AccountEntity {
+                Id = Guid.NewGuid(),
+                AccountNumber = "12345-6",
+                Balance = 1450.75m,
+                IsActive = true
+            };
+
+            // Act
+            await repository.UpdateAccount(accountEntity);
+
+            // Assert
+            genericRepoMock.Verify(r => r.Update(
+                It.Is<Account>(a =>
+                    a.Id == accountEntity.Id &&
+                    a.AccountNumber == "12345-6" &&
+                    a.Balance == 1450.75m &&
+                    a.IsActive),
+                false), Times.Once);
+        }
     }
 }

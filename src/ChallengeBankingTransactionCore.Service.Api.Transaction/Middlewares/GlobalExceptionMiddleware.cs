@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ChallengeBankingTransactionCore.Service.Domain.Transaction.Handler;
+using ChallengeBankingTransactionCore.Service.Domain.Transaction.Utils;
 
 namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Middlewares {
     public class GlobalExceptionMiddleware {
@@ -17,7 +18,9 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Middlewares {
                 await _next(context);
             }
             catch (Exception exception) {
-                _logger.LogError(exception, "Ocorreu um erro não tratado: {Message}", exception.Message);
+                var rawAccount = context.Request.Query["AccountNumber"].FirstOrDefault();
+                var maskedAccount = SensitiveDataMasker.MaskAccountNumber(rawAccount);
+                _logger.LogError(exception, "Ocorreu um erro não tratado (Path={Path}, Account={MaskedAccount}): {Message}", context.Request.Path.Value, maskedAccount, exception.Message);
                 await HandleExceptionAsync(context, exception);
             }
         }

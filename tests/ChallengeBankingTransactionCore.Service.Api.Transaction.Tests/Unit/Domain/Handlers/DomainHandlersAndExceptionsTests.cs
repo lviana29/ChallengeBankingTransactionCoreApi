@@ -81,7 +81,7 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Dom
 
             // Assert
             Assert.Equal("CORE_BANKING_007", ex.ErrorCode);
-            Assert.Equal(403, ex.StatusCode);
+            Assert.Equal(422, ex.StatusCode);
             Assert.Equal("warning", ex.TypeReturn);
             Assert.Equal("Invalid account number", ex.Message);
         }
@@ -93,9 +93,35 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.Dom
 
             // Assert
             Assert.Equal("CORE_BANKING_008", ex.ErrorCode);
-            Assert.Equal(403, ex.StatusCode);
+            Assert.Equal(422, ex.StatusCode);
             Assert.Equal("warning", ex.TypeReturn);
             Assert.Equal("Consolidate statement error", ex.Message);
+        }
+
+        [Fact]
+        public void InvalidDateRangeException_ShouldHaveCorrectProperties() {
+            // Act
+            var ex = new InvalidDateRangeException();
+
+            // Assert
+            Assert.Equal("CORE_BANKING_009", ex.ErrorCode);
+            Assert.Equal(422, ex.StatusCode);
+            Assert.Equal("warning", ex.TypeReturn);
+            Assert.Equal("Start date must be less than or equal to end date", ex.Message);
+        }
+
+        [Fact]
+        public void AccountConcurrencyConflictException_ShouldHaveCorrectProperties() {
+            // Act
+            var defaultEx = new AccountConcurrencyConflictException();
+            var customEx = new AccountConcurrencyConflictException("Custom concurrency message");
+
+            // Assert
+            Assert.Equal("CORE_BANKING_010", defaultEx.ErrorCode);
+            Assert.Equal(409, defaultEx.StatusCode);
+            Assert.Equal("warning", defaultEx.TypeReturn);
+            Assert.Contains("concurrent update conflict", defaultEx.Message);
+            Assert.Equal("Custom concurrency message", customEx.Message);
         }
     }
 }

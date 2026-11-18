@@ -10,17 +10,20 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
         private readonly Mock<IAccountRepository> _accountRepositoryMock;
         private readonly Mock<ITransactionRepository> _transactionRepositoryMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+        private readonly Mock<IOutboxRepository> _outboxRepositoryMock;
         private readonly ProcessTransactionUseCase _useCase;
 
         public ProcessTransactionUseCaseTests() {
             _accountRepositoryMock = new Mock<IAccountRepository>();
             _transactionRepositoryMock = new Mock<ITransactionRepository>();
             _unitOfWorkMock = new Mock<IUnitOfWork>();
+            _outboxRepositoryMock = new Mock<IOutboxRepository>();
 
             _useCase = new ProcessTransactionUseCase(
                 _accountRepositoryMock.Object,
                 _transactionRepositoryMock.Object,
-                _unitOfWorkMock.Object
+                _unitOfWorkMock.Object,
+                _outboxRepositoryMock.Object
             );
         }
 
@@ -62,9 +65,13 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             // Verifica se o saldo foi atualizado corretamente na conta (1000 + 200)
             Assert.Equal(1200, account.Balance);
 
-            // Garante que a conta foi consultada e o commit foi realizado
+            // Garante que a conta foi consultada, outbox registrada e o commit foi realizado
             _accountRepositoryMock.Verify(r => r.GetByAccountNumber(accountNumber), Times.Once);
             _accountRepositoryMock.Verify(r => r.UpdateAccount(It.Is<AccountEntity>(a => a.Id == accountId && a.Balance == 1200)), Times.Once);
+            _outboxRepositoryMock.Verify(o => o.AddOutboxMessage(It.Is<OutboxMessageEntity>(m =>
+                m.EventType == nameof(TransactionCreatedEventEntity) &&
+                m.Payload.Contains(accountNumber)
+            )), Times.Once);
 
             _unitOfWorkMock.Verify(u => u.CommitAsync(), Times.Once);
         }
@@ -296,6 +303,78 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             Assert.Equal(2, accountCalls);
             // Commit foi chamado apenas 1 vez (na 1ª tentativa); na 2ª tentativa falhou antes do commit
             _unitOfWorkMock.Verify(u => u.CommitAsync(), Times.Once);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-10)]
+        [InlineData(-0.01)]
+        public async Task ExecuteAsync_ShouldThrowInvalidTransactionValueError_WhenValueIsZeroOrNegative(decimal invalidValue) {
+            // Arrange
+            var dto = new TransactionDto("12345-6", invalidValue, 1, Guid.NewGuid().ToString());
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidTransactionValueError>(() => _useCase.ExecuteAsync(dto));
+            Assert.Equal(422, ex.StatusCode);
+            _accountRepositoryMock.Verify(r => r.GetByAccountNumber(It.IsAny<string>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task ExecuteAsync_ShouldThrowInvalidAccountNumber_WhenAccountNumberIsNullOrWhitespace(string invalidAccount) {
+            // Arrange
+            var dto = new TransactionDto(invalidAccount, 100m, 1, Guid.NewGuid().ToString());
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidAccountNumber>(() => _useCase.ExecuteAsync(dto));
+            Assert.Equal(422, ex.StatusCode);
+            _accountRepositoryMock.Verify(r => r.GetByAccountNumber(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_ShouldThrowInvalidTransactionTypeError_WhenTypeIsUnsupported() {
+            // Arrange
+            var dto = new TransactionDto("12345-6", 100m, 99, Guid.NewGuid().ToString());
+            _transactionRepositoryMock
+                .Setup(r => r.GetByIdempotency(It.IsAny<Guid>()))
+                .ReturnsAsync((TransactionEntity?)null);
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidTransactionTypeError>(() => _useCase.ExecuteAsync(dto));
+            Assert.Equal(422, ex.StatusCode);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_ShouldThrowProcessTransactionError_WhenCommitReturnsFalse() {
+            // Arrange
+            var accountId = Guid.NewGuid();
+            var accountNumber = "12345-6";
+            var account = new AccountEntity {
+                Id = accountId,
+                AccountNumber = accountNumber,
+                Balance = 1000m,
+                IsActive = true
+            };
+
+            var dto = new TransactionDto(accountNumber, 200m, 2, "not-a-guid");
+
+            _transactionRepositoryMock
+                .Setup(r => r.GetByIdempotency(It.IsAny<Guid>()))
+                .ReturnsAsync((TransactionEntity?)null);
+
+            _accountRepositoryMock
+                .Setup(r => r.GetByAccountNumber(accountNumber))
+                .ReturnsAsync(account);
+
+            _unitOfWorkMock
+                .Setup(u => u.CommitAsync())
+                .ReturnsAsync(false);
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<ProcessTransactionError>(() => _useCase.ExecuteAsync(dto));
+            Assert.Equal(422, ex.StatusCode);
+            _outboxRepositoryMock.Verify(o => o.AddOutboxMessage(It.IsAny<OutboxMessageEntity>()), Times.Once);
         }
     }
 }

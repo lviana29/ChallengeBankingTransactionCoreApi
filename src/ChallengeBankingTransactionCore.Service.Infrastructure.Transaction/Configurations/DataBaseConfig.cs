@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -5,6 +6,7 @@ using ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Model.C
 
 namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Configurations;
 
+[ExcludeFromCodeCoverage]
 public static class DataBaseConfig {
     public static IServiceCollection AddDatabaseConfiguration(this IServiceCollection services, IConfiguration configuration) {
         var connectionString = configuration.GetConnectionString("DefaultConnection");

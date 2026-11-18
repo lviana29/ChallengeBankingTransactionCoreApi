@@ -27,6 +27,36 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ChallengeBankingTransactionCore_RabbitMQ_Dev
+    ports:
+      - "5672:5672" # Porta padrão do RabbitMQ
+      - "15672:15672" # Painel web de gerenciamento (guest / guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - rede_ChallengeBanking
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: ChallengeBankingTransactionCore_Redis_Dev
+    ports:
+      - "6379:6379"
+    networks:
+      - rede_ChallengeBanking
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     container_name: ChallengeBankingTransactionCore.Api.Transaction.Dev
     ports:
@@ -35,6 +65,13 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=ChallengeBankingTransactionCore_Transaction_IntegrationTestDb;Uid=root;Pwd=@admin123;
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false,connectTimeout=500,syncTimeout=500
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - Hosting__EnableOutboxRelay=true
+      - Hosting__EnableConsolidationWorker=false
     depends_on:
       mysql:
         condition: service_healthy # <-- A API só sobe após o MySQL responder ao healthcheck com sucesso!
@@ -45,6 +82,39 @@ services:
         limits:
           cpus: "1.00"
           memory: 1G
+
+  consolidation-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${IMAGE_URL:-ghcr.io/challengebanking/transaction:latest}
+    container_name: ChallengeBankingTransactionCore.Worker.Consolidation.Dev
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8081
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=ChallengeBankingTransactionCore_Transaction_IntegrationTestDb;Uid=root;Pwd=@admin123;
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false,connectTimeout=500,syncTimeout=500
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - Hosting__EnableOutboxRelay=false
+      - Hosting__EnableConsolidationWorker=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rede_ChallengeBanking
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
 
 networks:
   rede_ChallengeBanking:

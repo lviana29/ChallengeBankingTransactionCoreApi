@@ -1,10 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,9 +36,11 @@
 
   <PropertyGroup>
     <!-- Outras propriedades existentes -->
-    <CoverletOutputFormat>json,opencover</CoverletOutputFormat>
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>cobertura,opencover,json</CoverletOutputFormat>
     <Exclude>[*.Tests]*,[xunit.*]*</Exclude>
-    <ExcludeByFile>**/bin/**/*.cs,**/obj/**/*.cs</ExcludeByFile>
+    <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+    <ExcludeByFile>**/bin/**/*.cs,**/obj/**/*.cs,**/Program.cs,**/Configurations/*Swagger*.cs,**/Configurations/*Scalar*.cs,**/Configurations/*OpenAPI*.cs,**/Configurations/DataBaseConfig.cs,**/Configurations/EvolveConfig.cs,**/Configurations/LoggingConfig.cs</ExcludeByFile>
   </PropertyGroup>
 
 </Project>

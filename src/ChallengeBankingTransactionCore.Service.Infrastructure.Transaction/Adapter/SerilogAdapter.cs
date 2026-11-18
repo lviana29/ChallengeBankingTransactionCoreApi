@@ -9,6 +9,10 @@ namespace ChallengeBankingTransactionCore.Service.Infrastructure.Transaction.Ada
             _logger.Information(message, args);
         }
 
+        public void LogWarning(string message, params object[] args) {
+            _logger.Warning(message, args);
+        }
+
         public void LogError(Exception ex, string message, params object[] args) {
             _logger.Error(ex, message, args);
         }
