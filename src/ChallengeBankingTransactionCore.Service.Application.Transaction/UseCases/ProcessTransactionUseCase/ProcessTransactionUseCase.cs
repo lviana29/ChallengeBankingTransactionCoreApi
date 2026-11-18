@@ -17,7 +17,9 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         }
         public async Task<string> ExecuteAsync(TransactionDto transactionDto) {
 
-            if (transactionDto.value < 0) throw new InvalidTransactionValueError();
+            if (string.IsNullOrWhiteSpace(transactionDto.accountNumber)) throw new InvalidAccountNumber();
+
+            if (transactionDto.value <= 0) throw new InvalidTransactionValueError();
 
             Guid idempotencyKey = Guid.TryParse(transactionDto.idempotencyKey, out var parsedIdempotencyKey)
                 ? parsedIdempotencyKey
@@ -72,8 +74,11 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
                     var transactionEvent = new TransactionCreatedEventEntity(
                         TransactionId: transactionId,
                         AccountId: account.Id,
+                        AccountNumber: account.AccountNumber,
                         Amount: transactionDto.value,
+                        BalanceAfter: newBalance,
                         TransactionType: description,
+                        IdempotencyKey: idempotencyKey,
                         CreatedAt: DateTime.UtcNow
                     );
 

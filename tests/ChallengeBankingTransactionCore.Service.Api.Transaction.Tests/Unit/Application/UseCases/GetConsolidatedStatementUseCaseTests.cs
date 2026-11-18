@@ -21,13 +21,16 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             _useCase = new GetConsolidatedStatementUseCase(_accountRepositoryMock.Object, _transactionRepositoryMock.Object);
         }
 
-        [Fact(DisplayName = "Should throw InvalidAccountNumber when AccountNumber is null or empty")]
-        public async Task ExecuteAsync_ShouldThrowInvalidAccountNumber_WhenAccountNumberIsNullOrEmpty() {
+        [Theory(DisplayName = "Should throw InvalidAccountNumber when AccountNumber is null, empty or whitespace")]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task ExecuteAsync_ShouldThrowInvalidAccountNumber_WhenAccountNumberIsNullOrEmpty(string invalidAccountNumber) {
             // Arrange
-            var filters = new ConsolidatedTransactionsFiltersDto(string.Empty, null, null);
+            var filters = new ConsolidatedTransactionsFiltersDto(invalidAccountNumber, null, null);
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidAccountNumber>(() => _useCase.ExecuteAsync(filters));
+            var ex = await Assert.ThrowsAsync<InvalidAccountNumber>(() => _useCase.ExecuteAsync(filters));
+            Assert.Equal(422, ex.StatusCode);
         }
 
         [Fact(DisplayName = "Should throw AccountNotFoundError when account does not exist")]

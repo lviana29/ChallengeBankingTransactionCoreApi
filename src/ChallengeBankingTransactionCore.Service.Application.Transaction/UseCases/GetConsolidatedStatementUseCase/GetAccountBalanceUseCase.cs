@@ -12,7 +12,7 @@ namespace ChallengeBankingTransactionCore.Service.Application.Transaction.UseCas
         }
 
         public async Task<ConsolidatedStatementDto> ExecuteAsync(ConsolidatedTransactionsFiltersDto filtersDto) {
-            if (string.IsNullOrEmpty(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
+            if (string.IsNullOrWhiteSpace(filtersDto.AccountNumber)) throw new InvalidAccountNumber();
 
             var account = await _accountRepository.GetByAccountNumber(filtersDto.AccountNumber);
             if (account == null) throw new AccountNotFoundError();

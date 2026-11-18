@@ -12,14 +12,14 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Controllers.V1
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(string), 201)]
-        [ProducesResponseType(403)]
-        [ProducesResponseType(404)]
-        [ProducesResponseType(409)]
-        [ProducesResponseType(422)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public async Task<IActionResult> Post([FromBody] TransactionDto dto) {
             var result = await _processTransactionUseCase.ExecuteAsync(dto);
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
     }
 }

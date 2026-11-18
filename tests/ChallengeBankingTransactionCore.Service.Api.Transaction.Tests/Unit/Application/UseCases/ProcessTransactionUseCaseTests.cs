@@ -300,6 +300,33 @@ namespace ChallengeBankingTransactionCore.Service.Api.Transaction.Tests.Unit.App
             // Commit foi chamado apenas 1 vez (na 1ª tentativa); na 2ª tentativa falhou antes do commit
             _unitOfWorkMock.Verify(u => u.CommitAsync(), Times.Once);
         }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-10)]
+        [InlineData(-0.01)]
+        public async Task ExecuteAsync_ShouldThrowInvalidTransactionValueError_WhenValueIsZeroOrNegative(decimal invalidValue) {
+            // Arrange
+            var dto = new TransactionDto("12345-6", invalidValue, 1, Guid.NewGuid().ToString());
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidTransactionValueError>(() => _useCase.ExecuteAsync(dto));
+            Assert.Equal(422, ex.StatusCode);
+            _accountRepositoryMock.Verify(r => r.GetByAccountNumber(It.IsAny<string>()), Times.Never);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task ExecuteAsync_ShouldThrowInvalidAccountNumber_WhenAccountNumberIsNullOrWhitespace(string invalidAccount) {
+            // Arrange
+            var dto = new TransactionDto(invalidAccount, 100m, 1, Guid.NewGuid().ToString());
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<InvalidAccountNumber>(() => _useCase.ExecuteAsync(dto));
+            Assert.Equal(422, ex.StatusCode);
+            _accountRepositoryMock.Verify(r => r.GetByAccountNumber(It.IsAny<string>()), Times.Never);
+        }
     }
 }
 
